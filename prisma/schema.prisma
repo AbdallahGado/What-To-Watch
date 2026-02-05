@@ -1,0 +1,126 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String  @id // This will be the Clerk User ID
+  email    String  @unique
+  name     String?
+  imageUrl String?
+  xp       Int     @default(0)
+  level    Int     @default(1)
+
+  // Relations
+  dna           CinephileDNA?
+  watchlist     WatchlistItem[]
+  history       WatchHistory[]
+  sessions      WatchSessionMember[]
+  reviews       UserReview[]
+  followers     Follow[]             @relation("Follower")
+  following     Follow[]             @relation("Following")
+  notifications Notification[]
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model CinephileDNA {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Genre scores (0-100)
+  action   Int @default(0)
+  comedy   Int @default(0)
+  drama    Int @default(0)
+  horror   Int @default(0)
+  sciFi    Int @default(0)
+  romance  Int @default(0)
+  thriller Int @default(0)
+
+  updatedAt DateTime @updatedAt
+}
+
+model WatchlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId    Int
+  title     String
+  mediaType String // "movie" or "tv"
+  poster    String?
+  addedAt   DateTime @default(now())
+
+  @@unique([userId, tmdbId])
+}
+
+model WatchHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId    Int
+  title     String
+  mediaType String
+  watchedAt DateTime @default(now())
+}
+
+model WatchSession {
+  id        String               @id @default(cuid())
+  code      String               @unique // Short code for friends to join
+  hostId    String
+  status    String               @default("active") // "active", "matched", "cancelled"
+  members   WatchSessionMember[]
+  createdAt DateTime             @default(now())
+}
+
+model WatchSessionMember {
+  id        String       @id @default(cuid())
+  sessionId String
+  session   WatchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserReview {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId    Int
+  mediaType String // "movie" or "tv"
+  rating    Int // 1-5 scale
+  reviewText    String? // Optional text review
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, tmdbId])
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  follower    User     @relation(name: "Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation(name: "Following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // "follow", "review", "recommendation"
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+

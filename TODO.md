@@ -1,0 +1,5 @@
+- [x] Fix src/app/actions/swipe.ts: Await auth() in all functions
+- [x] Fix src/app/series/page.tsx: Add error state
+- [x] Fix src/app/actions/review.ts: Await auth() in all functions
+- [x] Fix src/features/title/movie-details.tsx: Import ReviewForm and destructure props
+- [x] Run TypeScript check to verify fixes
