@@ -17,7 +17,8 @@ export async function GET() {
       return l;
     });
     return NextResponse.json({ found: true, path: p, lines: masked });
-  } catch (e: any) {
-    return NextResponse.json({ found: false, error: String(e.message) }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ found: false, error: message }, { status: 500 });
   }
 }

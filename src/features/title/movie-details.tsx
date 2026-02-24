@@ -1,12 +1,14 @@
 
 'use client';
 
-import React from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Navbar } from '@/app/components/Navbar';
+import { SignedIn, SignedOut, SignInButton, clerkEnabled } from '@/lib/auth-client';
 import { useWatchlistStore } from '@/features/watchlist/store';
-import { TMDBMedia } from '@/lib/tmdb';
+import type { TMDBCastMember, TMDBCrewMember, TMDBMedia, TMDBMediaDetails, TMDBVideo } from '@/lib/tmdb-types';
+import { getBackdropUrl } from '@/lib/tmdb-images';
+import { getMediaTitle, getMediaYear } from '@/lib/media';
 import { Play, Plus, Check, Star, Calendar, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ActorCard } from '@/app/components/ActorCard';
@@ -17,38 +19,79 @@ import { ScrollReveal } from '@/app/components/ScrollReveal';
 import { ReviewForm } from '@/app/components/ReviewForm';
 
 interface MovieDetailsProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
-  reviews?: any[];
-  userReview?: any;
+  data: TMDBMediaDetails;
+  reviews?: ReviewWithUser[];
+  userReview?: UserReview | null;
+  isSignedIn?: boolean;
 }
 
-export function MovieDetails({ data, reviews, userReview }: MovieDetailsProps) {
-  const backdropUrl = data.backdrop_path
-    ? `https://image.tmdb.org/t/p/original${data.backdrop_path}`
-    : undefined;
+interface ReviewUser {
+  name?: string | null;
+  imageUrl?: string | null;
+}
+
+interface ReviewWithUser {
+  id: string;
+  rating: number;
+  reviewText?: string | null;
+  createdAt: string | Date;
+  user: ReviewUser;
+}
+
+interface UserReview {
+  id: string;
+  rating: number;
+  reviewText?: string | null;
+}
+
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0
+});
+
+const reviewDateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric'
+});
+
+export function MovieDetails({ data, reviews, userReview, isSignedIn }: MovieDetailsProps) {
+  const backdropUrl = getBackdropUrl(data.backdrop_path, 'original');
+  const title = getMediaTitle(data);
+  const mediaType = data.media_type ?? 'movie';
+  const tagline = data.tagline?.trim();
 
   const trailer = data.videos?.results?.find(
-    (v: { type: string }) => v.type === 'Trailer' || v.type === 'Teaser'
+    (v: TMDBVideo) => v.type === 'Trailer' || v.type === 'Teaser'
   );
+  const trailerUrl = trailer?.key ? `https://www.youtube.com/watch?v=${trailer.key}` : undefined;
 
-  const year = (data.release_date || data.first_air_date)?.slice(0, 4);
-  const runtime = data.runtime 
-    ? `${Math.floor(data.runtime / 60)}h ${data.runtime % 60}m` 
+  const year = getMediaYear(data);
+  const runtime = data.runtime
+    ? `${Math.floor(data.runtime / 60)}h ${data.runtime % 60}m`
     : undefined;
-  
-  const rating = data.vote_average?.toFixed(1);
+
+  const rating = data.vote_average > 0 ? data.vote_average.toFixed(1) : undefined;
+  const cast = data.credits?.cast ?? [];
+  const crew = data.credits?.crew ?? [];
+  const creators = data.created_by ?? [];
+  const directors = crew.filter((person) => person.job === 'Director');
+  const writers = crew.filter((person) => person.job === 'Writer' || person.job === 'Screenplay');
+  const showCreatives = directors.length > 0 || writers.length > 0 || creators.length > 0;
+  const reviewItems = reviews ?? [];
+  const hasReviews = reviewItems.length > 0;
 
   const { toggle, isSaved } = useWatchlistStore();
   const router = useRouter();
-  const saved = isSaved(data.id, data.media_type || 'movie');
+  const saved = isSaved(data.id, mediaType);
 
   const handleToggle = () => {
     const item: TMDBMedia = data;
     toggle({
       id: item.id,
-      mediaType: item.media_type || 'movie',
-      title: item.title ?? item.name ?? '',
+      mediaType,
+      title,
       posterPath: item.poster_path,
       year
     });
@@ -65,9 +108,10 @@ export function MovieDetails({ data, reviews, userReview }: MovieDetailsProps) {
           {backdropUrl && (
              <Image
                 src={backdropUrl}
-                alt={data.title || data.name}
+                alt={title}
                 fill
                 priority
+                sizes="100vw"
                 className="object-cover"
              />
           )}
@@ -87,7 +131,7 @@ export function MovieDetails({ data, reviews, userReview }: MovieDetailsProps) {
                 {/* Metadata Badge */}
                 <div className="flex flex-wrap items-center gap-4 text-sm font-medium text-white/70 mb-6">
                      <span className="flex items-center gap-1.5 px-3 py-1 bg-brand-500 text-white rounded-md font-bold text-xs shadow-lg shadow-brand-500/20">
-                        {data.media_type === 'tv' ? 'SERIES' : 'MOVIE'}
+                        {mediaType === 'tv' ? 'SERIES' : 'MOVIE'}
                     </span>
                     {rating && (
                         <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md text-white border border-white/10">
@@ -110,37 +154,76 @@ export function MovieDetails({ data, reviews, userReview }: MovieDetailsProps) {
                 </div>
 
                 <h1 className="text-5xl md:text-8xl font-display font-bold text-white mb-4 leading-tight tracking-tight drop-shadow-2xl">
-                    {data.title || data.name}
+                    {title}
                 </h1>
 
-                {data.tagline && (
-                    <p className="text-xl md:text-2xl text-brand-200 font-light italic mb-8 tracking-wide opacity-90 max-w-3xl">
-                        "{data.tagline}"
-                    </p>
+                {tagline && (
+                  <p className="text-xl md:text-2xl text-brand-200 font-light italic mb-8 tracking-wide opacity-90 max-w-3xl">
+                    &ldquo;{tagline}&rdquo;
+                  </p>
                 )}
 
                 <div className="flex flex-wrap items-center gap-4 mb-8">
-                    {trailer && (
-                         <button 
-                            onClick={() => window.open(`https://www.youtube.com/watch?v=${trailer.key}`, '_blank')}
-                            className="group px-8 py-4 bg-white text-background rounded-2xl font-bold tracking-wide hover:bg-brand-50 transition-colors shadow-lg shadow-white/5 flex items-center gap-2"
-                        >
-                            <Play className="w-5 h-5 fill-current" />
-                            Play Trailer
-                        </button>
+                    {trailerUrl && (
+                      <a
+                        href={trailerUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="group px-8 py-4 bg-white text-background rounded-2xl font-bold tracking-wide hover:bg-brand-50 transition-colors shadow-lg shadow-white/5 flex items-center gap-2"
+                        aria-label={`Play ${title} trailer`}
+                      >
+                        <Play className="w-5 h-5 fill-current" />
+                        Play Trailer
+                      </a>
                     )}
 
-                    <button 
-                        onClick={handleToggle}
-                        className={`px-8 py-4 rounded-2xl font-semibold border flex items-center gap-2 transition-all duration-300 ${
-                            saved 
-                            ? 'bg-brand-500/20 border-brand-500 text-brand-300' 
-                            : 'glass-button hover:bg-white/10 border-white/10'
-                        }`}
-                    >
-                        {saved ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                        {saved ? 'Watchlist' : 'Add to List'}
-                    </button>
+                    {clerkEnabled ? (
+                        <>
+                            <SignedIn>
+                                <button
+                                    type="button"
+                                    onClick={handleToggle}
+                                    aria-pressed={saved}
+                                    aria-label={saved ? 'Remove from watchlist' : 'Add to watchlist'}
+                                    className={`px-8 py-4 rounded-2xl font-semibold border flex items-center gap-2 transition-all duration-300 ${
+                                        saved 
+                                        ? 'bg-brand-500/20 border-brand-500 text-brand-300' 
+                                        : 'glass-button hover:bg-white/10 border-white/10'
+                                    }`}
+                                >
+                                    {saved ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                                    {saved ? 'Watchlist' : 'Add to List'}
+                                </button>
+                            </SignedIn>
+                            <SignedOut>
+                                <SignInButton mode="modal" forceRedirectUrl="/profile">
+                                    <button
+                                        type="button"
+                                        className="px-8 py-4 rounded-2xl font-semibold border flex items-center gap-2 transition-all duration-300 glass-button hover:bg-white/10 border-white/10 text-white/80"
+                                        aria-label="Sign in to add to watchlist"
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                        Sign in to add
+                                    </button>
+                                </SignInButton>
+                            </SignedOut>
+                        </>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={handleToggle}
+                            aria-pressed={saved}
+                            aria-label={saved ? 'Remove from watchlist' : 'Add to watchlist'}
+                            className={`px-8 py-4 rounded-2xl font-semibold border flex items-center gap-2 transition-all duration-300 ${
+                                saved 
+                                ? 'bg-brand-500/20 border-brand-500 text-brand-300' 
+                                : 'glass-button hover:bg-white/10 border-white/10'
+                            }`}
+                        >
+                            {saved ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                            {saved ? 'Watchlist' : 'Add to List'}
+                        </button>
+                    )}
                 </div>
             </motion.div>
         </div>
@@ -169,7 +252,7 @@ export function MovieDetails({ data, reviews, userReview }: MovieDetailsProps) {
 
                 <ScrollReveal delay={0.2}>
                     <Section title="Top Cast">
-                        {data.credits?.cast?.slice(0, 10).map((actor: any) => (
+                        {cast.slice(0, 10).map((actor: TMDBCastMember) => (
                             <div key={actor.id} className="min-w-[120px]">
                                 <ActorCard 
                                     person={{
@@ -188,12 +271,12 @@ export function MovieDetails({ data, reviews, userReview }: MovieDetailsProps) {
             {/* Right Column: Key Details */}
             <div className="space-y-8">
                 {/* Director & Crew Widget - Only show if we have crew info */}
-                {(data.credits?.crew?.some((p: any) => ['Director', 'Writer', 'Screenplay'].includes(p.job)) || data.created_by?.length > 0) && (
+                {showCreatives && (
                     <ScrollReveal delay={0.3} direction="left">
                         <div className="p-8 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-md space-y-6 shadow-xl">
                             <h3 className="text-sm font-bold text-brand-300 uppercase tracking-widest mb-4">Creatives</h3>
                             
-                            {data.credits?.crew?.filter((p: any) => p.job === 'Director').slice(0, 1).map((d: any) => (
+                            {directors.slice(0, 1).map((d: TMDBCrewMember) => (
                                 <div key={d.id}>
                                     <div className="text-white/50 text-xs uppercase tracking-wide mb-1">Director</div>
                                     <Link href={`/person/${d.id}`} className="font-semibold text-white text-lg hover:text-brand-300 transition-colors">
@@ -202,14 +285,14 @@ export function MovieDetails({ data, reviews, userReview }: MovieDetailsProps) {
                                 </div>
                             ))}
                             
-                            {data.credits?.crew?.filter((p: any) => p.job === 'Writer' || p.job === 'Screenplay').slice(0, 2).map((d: any) => (
+                            {writers.slice(0, 2).map((d: TMDBCrewMember) => (
                                 <div key={d.id}>
                                     <div className="text-white/50 text-xs uppercase tracking-wide mb-1">Writer</div>
                                     <div className="font-medium text-white">{d.name}</div>
                                 </div>
                             ))}
                             
-                            {data.created_by?.map((d: any) => (
+                            {creators.map((d: TMDBCrewMember) => (
                                 <div key={d.id}>
                                     <div className="text-white/50 text-xs uppercase tracking-wide mb-1">Creator</div>
                                     <div className="font-medium text-white">{d.name}</div>
@@ -240,14 +323,18 @@ export function MovieDetails({ data, reviews, userReview }: MovieDetailsProps) {
                         {data.budget > 0 && (
                             <div>
                                 <div className="text-white/50 text-xs uppercase tracking-wide mb-1">Budget</div>
-                                <div className="font-medium text-white text-brand-100">${data.budget.toLocaleString()}</div>
+                                <div className="font-medium text-white text-brand-100">
+                                  {currencyFormatter.format(data.budget)}
+                                </div>
                             </div>
                         )}
                         
                         {data.revenue > 0 && (
                             <div>
                                 <div className="text-white/50 text-xs uppercase tracking-wide mb-1">Revenue</div>
-                                <div className="font-medium text-white text-green-300">${data.revenue.toLocaleString()}</div>
+                                <div className="font-medium text-white text-green-300">
+                                  {currencyFormatter.format(data.revenue)}
+                                </div>
                             </div>
                         )}
 
@@ -255,7 +342,7 @@ export function MovieDetails({ data, reviews, userReview }: MovieDetailsProps) {
                             <div>
                                 <div className="text-white/50 text-xs uppercase tracking-wide mb-2">Production</div>
                                 <div className="flex flex-wrap gap-2">
-                                    {data.production_companies.slice(0, 3).map((c: any) => (
+                                    {data.production_companies.slice(0, 3).map((c) => (
                                         <span key={c.id} className="text-xs text-white/90 bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
                                             {c.name}
                                         </span>
@@ -286,15 +373,16 @@ export function MovieDetails({ data, reviews, userReview }: MovieDetailsProps) {
                     {/* Review Form */}
                     <ReviewForm
                         tmdbId={data.id}
-                        mediaType={data.media_type || 'movie'}
+                        mediaType={mediaType}
                         existingReview={userReview}
                         onReviewAdded={() => router.refresh()}
+                        isSignedIn={isSignedIn}
                     />
 
                     {/* Reviews List */}
-                    {reviews && reviews.length > 0 ? (
+                    {hasReviews ? (
                         <div className="space-y-6">
-                            {reviews.map((review: any) => (
+                            {reviewItems.map((review) => (
                                 <div key={review.id} className="p-6 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-md">
                                     <div className="flex items-start gap-4">
                                         <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
@@ -304,6 +392,7 @@ export function MovieDetails({ data, reviews, userReview }: MovieDetailsProps) {
                                                     alt={review.user.name || 'User'}
                                                     width={48}
                                                     height={48}
+                                                    sizes="48px"
                                                     className="rounded-full"
                                                 />
                                             ) : (
@@ -315,7 +404,7 @@ export function MovieDetails({ data, reviews, userReview }: MovieDetailsProps) {
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3 mb-2">
                                                 <h4 className="text-white font-medium">{review.user.name || 'Anonymous'}</h4>
-                                                <div className="flex items-center gap-1">
+                                                <div className="flex items-center gap-1" role="img" aria-label={`${review.rating} out of 5`}>
                                                     {[1, 2, 3, 4, 5].map((star) => (
                                                         <Star
                                                             key={star}
@@ -324,11 +413,12 @@ export function MovieDetails({ data, reviews, userReview }: MovieDetailsProps) {
                                                                     ? 'text-yellow-500 fill-yellow-500'
                                                                     : 'text-white/20'
                                                             }`}
+                                                            aria-hidden="true"
                                                         />
                                                     ))}
                                                 </div>
                                                 <span className="text-white/50 text-sm">
-                                                    {new Date(review.createdAt).toLocaleDateString()}
+                                                    {reviewDateFormatter.format(new Date(review.createdAt))}
                                                 </span>
                                             </div>
                                             {review.reviewText && (

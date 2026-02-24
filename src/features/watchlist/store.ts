@@ -18,6 +18,7 @@ interface WatchlistState {
   remove: (id: number, mediaType: MediaKind) => void;
   toggle: (item: WatchlistItem) => void;
   isSaved: (id: number, mediaType: MediaKind) => boolean;
+  clear: () => void;
 }
 
 const keyFor = (id: number, mediaType: MediaKind) => `${mediaType}:${id}`;
@@ -47,7 +48,8 @@ export const useWatchlistStore = create<WatchlistState>()(
           get().add(item);
         }
       },
-      isSaved: (id, mediaType) => Boolean(get().items[keyFor(id, mediaType)])
+      isSaved: (id, mediaType) => Boolean(get().items[keyFor(id, mediaType)]),
+      clear: () => set({ items: {} })
     }),
     {
       name: 'watchlist-storage', // name of the item in the storage (must be unique)

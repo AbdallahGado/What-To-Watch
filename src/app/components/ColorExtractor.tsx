@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { usePalette } from 'color-thief-react'
 import { useTheme } from '@/components/ThemeContext'
 
@@ -9,7 +9,7 @@ interface ColorExtractorProps {
 }
 
 export function ColorExtractor({ src }: ColorExtractorProps) {
-  const { setThemeColors, resetTheme } = useTheme()
+  const { setThemeColors } = useTheme()
   const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(src)}` // Use a proxy to avoid CORS issues for color extraction
   
   const { data, loading, error } = usePalette(proxyUrl, 3, 'hex', {

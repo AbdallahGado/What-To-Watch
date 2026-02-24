@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Play, Plus, Check } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, Play, Plus, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
+import { getBackdropUrl } from '@/lib/tmdb-images';
+import type { TMDBMediaType } from '@/lib/tmdb-types';
 
 interface HeroProps {
   content: {
     id: string;
-    media_type?: string; 
+    media_type?: TMDBMediaType;
     title: string;
     overview: string;
     backdrop: string | null;
@@ -24,35 +27,40 @@ export const Hero = ({ content, primaryCta, onWhatToWatch, isInWatchlist, onTogg
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
 
-  function makeImageUrl(path?: string | null) {
-    if (!path) return undefined
-    if (path.startsWith('http://') || path.startsWith('https://')) return path
-    return `https://image.tmdb.org/t/p/original${path}`
-  }
-
-  const backdropUrl = makeImageUrl(content.backdrop ?? content.poster)
+  const backdropUrl = getBackdropUrl(content.backdrop ?? content.poster, 'original');
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchVideo = async () => {
       try {
         const id = parseInt(content.id);
         if (!id) return;
 
-        const resp = await fetch(`/api/tmdb/videos?id=${id}&type=${content.media_type === 'tv' ? 'tv' : 'movie'}`)
-        if (!resp.ok) return
-        const videos = await resp.json()
+        const resp = await fetch(
+          `/api/tmdb/videos?id=${id}&type=${content.media_type === 'tv' ? 'tv' : 'movie'}`,
+          { signal: controller.signal }
+        );
+        if (!resp.ok) return;
+        const videos = await resp.json();
         const trailer = Array.isArray(videos)
-          ? videos.find((v: any) => v.type === 'Trailer' || v.type === 'Teaser')
+          ? videos.find((v: { type?: string }) => v.type === 'Trailer' || v.type === 'Teaser')
           : null
         if (trailer?.key) {
           setTrailerKey(trailer.key)
         }
       } catch (e) {
-        console.error('Failed to load hero video', e)
+        if (!controller.signal.aborted) {
+          console.error('Failed to load hero video', e)
+        }
       }
     }
 
-    fetchVideo()
+    const timerId = window.setTimeout(fetchVideo, 1500);
+    return () => {
+      window.clearTimeout(timerId);
+      controller.abort();
+    };
   }, [content.id, content.media_type]);
 
   return (
@@ -61,7 +69,7 @@ export const Hero = ({ content, primaryCta, onWhatToWatch, isInWatchlist, onTogg
       <div className="absolute inset-0 bg-slate-950">
          {/* Background Image (always present behind, or as fallback) */}
         {backdropUrl && (
-          <div className={`w-full h-full ${isVideoLoaded ? 'opacity-0' : 'opacity-50'} transition-opacity duration-1000`}>
+          <div className={`relative w-full h-full ${isVideoLoaded ? 'opacity-0' : 'opacity-50'} transition-opacity duration-1000`}>
             <Image
               src={backdropUrl}
               alt={content.title}
@@ -119,13 +127,13 @@ export const Hero = ({ content, primaryCta, onWhatToWatch, isInWatchlist, onTogg
 
           <div className="flex flex-wrap items-center gap-4">
             {primaryCta && (
-              <a
+              <Link
                 href={primaryCta}
                 className="px-8 py-4 bg-white text-background rounded-2xl font-semibold tracking-wide hover:bg-brand-50 transition-colors shadow-lg flex items-center gap-2"
               >
-                 <Play className="w-5 h-5 fill-current" />
-                 Open Details
-              </a>
+                <Play className="w-5 h-5 fill-current" />
+                Open Details
+              </Link>
             )}
 
             {onToggleWatchlist && (
@@ -145,25 +153,27 @@ export const Hero = ({ content, primaryCta, onWhatToWatch, isInWatchlist, onTogg
       </div>
 
       {/* Floating "What To Watch" FAB */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="absolute bottom-12 left-12 z-20 hidden lg:block"
-      >
-          <button 
-            onClick={onWhatToWatch}
-            className="flex items-center gap-4 bg-slate-900/80 backdrop-blur-xl border border-white/5 p-2 pr-6 rounded-full shadow-2xl hover:bg-slate-900 transition-all"
-          >
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-500 to-accent-500 flex items-center justify-center">
-                <span className="text-lg">✨</span>
-            </div>
-            <div className="text-left">
-                <div className="text-[10px] text-white/40 uppercase tracking-widest font-semibold">Mood Matcher</div>
-                <div className="text-xs font-medium text-white">Find something new</div>
-            </div>
-          </button>
-      </motion.div>
+      {onWhatToWatch && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="absolute bottom-12 left-12 z-20 hidden lg:block"
+        >
+            <button 
+              onClick={onWhatToWatch}
+              className="flex items-center gap-4 bg-slate-900/80 backdrop-blur-xl border border-white/5 p-2 pr-6 rounded-full shadow-2xl hover:bg-slate-900 transition-all"
+            >
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-500 to-accent-500 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" aria-hidden="true" />
+              </div>
+              <div className="text-left">
+                  <div className="text-[10px] text-white/40 uppercase tracking-widest font-semibold">Mood Matcher</div>
+                  <div className="text-xs font-medium text-white">Find something new</div>
+              </div>
+            </button>
+        </motion.div>
+      )}
     </div>
   );
 };

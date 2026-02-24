@@ -1,17 +1,17 @@
 import Image from 'next/image';
 import { Navbar } from '@/app/components/Navbar';
+import type { TMDBMedia, TMDBPersonDetails } from '@/lib/tmdb-types';
+import { getMediaTitle } from '@/lib/media';
+import { getProfileUrl } from '@/lib/tmdb-images';
 
 interface PersonDetailsProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
+  data: TMDBPersonDetails;
 }
 
 export function PersonDetails({ data }: PersonDetailsProps) {
-  const profileUrl = data.profile_path
-    ? `https://image.tmdb.org/t/p/w300${data.profile_path}`
-    : undefined;
+  const profileUrl = getProfileUrl(data.profile_path, 'w300');
 
-  const credits = data.combined_credits?.cast ?? [];
+  const credits = (data.combined_credits?.cast ?? []) as TMDBMedia[];
 
   return (
     <div className="min-h-screen bg-background text-white pb-16">
@@ -48,10 +48,10 @@ export function PersonDetails({ data }: PersonDetailsProps) {
           <section className="mt-10">
             <h2 className="text-sm font-medium mb-3">Known for</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-white/70">
-              {credits.slice(0, 8).map((credit: any) => (
+              {credits.slice(0, 8).map((credit) => (
                 <div key={credit.id} className="space-y-1">
                   <p className="font-medium line-clamp-2">
-                    {credit.title ?? credit.name}
+                  {getMediaTitle(credit)}
                   </p>
                   {credit.character && (
                     <p className="text-white/50 line-clamp-1">

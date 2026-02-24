@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Film, CheckCircle } from 'lucide-react'
 import Image from 'next/image'
+import { getPosterUrl } from '@/lib/tmdb-images'
 
 interface MatchCelebrationProps {
   isOpen: boolean
@@ -14,6 +15,7 @@ interface MatchCelebrationProps {
 }
 
 export function MatchCelebration({ isOpen, movieTitle, poster, onClose }: MatchCelebrationProps) {
+  const posterUrl = getPosterUrl(poster, 'w500');
   useEffect(() => {
     if (isOpen) {
       confetti({
@@ -49,14 +51,14 @@ export function MatchCelebration({ isOpen, movieTitle, poster, onClose }: MatchC
             </div>
 
             <div className="space-y-2">
-                <h2 className="text-4xl font-display font-bold">It's a Match!</h2>
+                <h2 className="text-4xl font-display font-bold">It&apos;s a Match!</h2>
                 <p className="text-white/50">Everyone in your squad wants to watch this.</p>
             </div>
 
             <div className="relative aspect-[2/3] w-48 mx-auto rounded-3xl overflow-hidden shadow-2xl shadow-brand-500/20">
-                {poster ? (
+                {posterUrl ? (
                     <Image 
-                        src={`https://image.tmdb.org/t/p/w500${poster}`} 
+                        src={posterUrl} 
                         alt={movieTitle} 
                         fill 
                         className="object-cover"

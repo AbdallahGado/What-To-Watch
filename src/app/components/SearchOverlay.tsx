@@ -3,24 +3,13 @@
 import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Clapperboard, Monitor, Star } from 'lucide-react';
-import { TMDBMedia } from '@/lib/tmdb';
 import Image from 'next/image';
 import Link from 'next/link';
-
-// Custom debounce hook for optimized search
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-
-  return debouncedValue;
-}
+import type { TMDBMedia } from '@/lib/tmdb-types';
+import { getPosterUrl } from '@/lib/tmdb-images';
+import { getMediaHref } from '@/lib/media';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -29,7 +18,8 @@ interface SearchOverlayProps {
 
 // Memoized search result item
 const SearchResultItem = memo(({ item, index, onClose }: { item: TMDBMedia; index: number; onClose: () => void }) => {
-  const href = item.media_type === 'tv' ? `/tv/${item.id}` : `/movie/${item.id}`;
+  const href = getMediaHref(item);
+  const posterUrl = getPosterUrl(item.poster_path, 'w500');
   
   return (
     <motion.div
@@ -39,9 +29,9 @@ const SearchResultItem = memo(({ item, index, onClose }: { item: TMDBMedia; inde
     >
       <Link href={href} onClick={onClose} className="group block space-y-3">
         <div className="relative aspect-[2/3] rounded-xl overflow-hidden shadow-lg bg-white/5">
-          {item.poster_path ? (
+          {posterUrl ? (
             <Image 
-              src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
+              src={posterUrl}
               alt={item.title || item.name || 'Poster'}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -87,6 +77,7 @@ const SearchOverlayComponent = ({ isOpen, onClose }: SearchOverlayProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debouncedQuery = useDebounce(query, 500);
+  useLockBodyScroll(isOpen);
 
   // Handle overlay visibility
   useEffect(() => {
@@ -94,39 +85,60 @@ const SearchOverlayComponent = ({ isOpen, onClose }: SearchOverlayProps) => {
       return;
     }
 
-    const previousOverflow = document.body.style.overflow;
     const timer = setTimeout(() => inputRef.current?.focus(), 100);
-    document.body.style.overflow = 'hidden';
 
     return () => {
       clearTimeout(timer);
-      document.body.style.overflow = previousOverflow;
     };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) return;
+    setQuery('');
+    setResults([]);
+    setIsLoading(false);
   }, [isOpen]);
 
   // Handle search
   useEffect(() => {
+    const controller = new AbortController();
+
     const performSearch = async () => {
       if (!debouncedQuery.trim()) {
         setResults([]);
+        setIsLoading(false);
         return;
       }
 
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`);
+        const response = await fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`, {
+          signal: controller.signal
+        });
+        if (!response.ok) {
+          throw new Error('Search request failed');
+        }
         const data = (await response.json()) as TMDBMedia[];
         // Filter to only items with posters for better visual results
-        setResults(data.filter(item => item.poster_path));
+        setResults(
+          data.filter(
+            (item) =>
+              item.poster_path &&
+              (item.media_type === 'movie' || item.media_type === 'tv' || !item.media_type)
+          )
+        );
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error('Search failed:', error);
         setResults([]);
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     };
 
     performSearch();
+
+    return () => controller.abort();
   }, [debouncedQuery]);
 
   const handleClose = useCallback(onClose, [onClose]);
@@ -196,7 +208,9 @@ const SearchOverlayComponent = ({ isOpen, onClose }: SearchOverlayProps) => {
                 </div>
               ) : query.trim() ? (
                 <div className="text-center py-20">
-                  <div className="text-white/30 text-xl font-light">No results found for "{query}"</div>
+                  <div className="text-white/30 text-xl font-light">
+                    No results found for &ldquo;{query}&rdquo;
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-20">

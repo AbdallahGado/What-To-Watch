@@ -1,32 +1,15 @@
 import { NextResponse } from 'next/server'
-import { getMovieVideos, getTvVideos } from '@/lib/tmdb'
+import { getMovieVideos, getTvVideos, hasTmdbApiKey } from '@/lib/tmdb'
 
-// Ensure data is JSON serializable by converting to plain object
-function sanitize(data: any): any {
-  if (data === null || data === undefined) return data
-  if (typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean') return data
-  if (Array.isArray(data)) return data.map(sanitize)
-  if (typeof data === 'object') {
-    const result: Record<string, any> = {}
-    for (const key in data) {
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
-        const val = data[key]
-        // Skip functions and symbols
-        if (typeof val !== 'function' && typeof val !== 'symbol') {
-          result[key] = sanitize(val)
-        }
-      }
-    }
-    return result
-  }
-  return undefined
+const JSON_CACHE_HEADERS = {
+  'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600'
 }
 
 export async function GET(req: Request) {
   try {
     // If TMDB API key isn't configured, return empty list (dev mode/fallback)
-    if (!process.env.TMDB_API_KEY) {
-      return NextResponse.json([], { status: 200 })
+    if (!hasTmdbApiKey()) {
+      return NextResponse.json([], { status: 200, headers: JSON_CACHE_HEADERS })
     }
     const url = new URL(req.url)
     const id = url.searchParams.get('id')
@@ -48,15 +31,7 @@ export async function GET(req: Request) {
       videos = await getTvVideos(numericId)
     }
 
-    // Ensure the response is JSON serializable. Try stringify/parse as a safety step.
-    try {
-      const safe = sanitize(videos)
-      const body = JSON.parse(JSON.stringify(safe))
-      return NextResponse.json(body)
-    } catch (serErr) {
-      console.error('TMDB videos serialization error', serErr, { videos })
-      return NextResponse.json([], { status: 200 })
-    }
+    return NextResponse.json(videos, { headers: JSON_CACHE_HEADERS })
   } catch (err) {
     console.error('TMDB videos API error', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

@@ -4,6 +4,7 @@ import React, { useCallback, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { Users, Share2, Play, Pause, Film } from 'lucide-react'
 import { SwipeCard } from '@/app/components/SwipeCard'
+import type { TMDBMediaType } from '@/lib/tmdb-types'
 import { MatchCelebration } from '@/app/components/MatchCelebration'
 import { toast } from 'sonner'
 
@@ -11,7 +12,7 @@ interface SwipeMovie {
   id: string
   title: string
   poster: string | null
-  mediaType: string
+  mediaType: TMDBMediaType
 }
 
 interface SwipeMember {
@@ -43,6 +44,7 @@ export function SwipeSessionClient({ code, members, initialMovies }: SwipeSessio
       await navigator.clipboard.writeText(url)
       toast.success('Invite link copied to clipboard')
     } catch (error) {
+      console.error('Invite copy failed', error)
       toast.error('Could not copy invite link')
     }
   }, [code])
@@ -66,8 +68,8 @@ export function SwipeSessionClient({ code, members, initialMovies }: SwipeSessio
   const statsText = useMemo(() => {
     if (isEmpty) return 'No more titles in this round.'
     if (!isActive) return 'Hit start when your squad is ready.'
-    return `${remaining} titles left`
-  }, [isActive, isEmpty, remaining])
+    return `${remaining} titles left · ${liked.length} likes`
+  }, [isActive, isEmpty, remaining, liked.length])
 
   return (
     <>

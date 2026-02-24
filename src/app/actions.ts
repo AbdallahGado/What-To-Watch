@@ -1,7 +1,8 @@
 
 'use server';
 
-import { getDiscoverMovies, getDiscoverTv, TMDBMedia, searchMulti } from '@/lib/tmdb';
+import { getDiscoverMovies, getDiscoverTv, searchMulti } from '@/lib/tmdb';
+import type { TMDBMedia } from '@/lib/tmdb-types';
 
 /**
  * Fetches movies with improved error handling and validation

@@ -1,8 +1,9 @@
+'use client';
+
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { X, Instagram, Twitter, Globe } from 'lucide-react';
 import { Actor, CONTENT } from '../data/mockData';
-import { MovieCard } from './MovieCard';
 
 interface ActorModalProps {
   actor: Actor | null;
@@ -53,7 +54,7 @@ export const ActorModal = ({ actor, onClose, movies }: ActorModalProps) => {
             
             <div className="flex-1 p-8">
               <h2 className="text-4xl font-bold text-white mb-2">{actor.name}</h2>
-              <p className="text-gray-400 mb-6">Actor • Producer</p>
+              <p className="text-gray-400 mb-6">Actor / Producer</p>
               
               <div className="flex gap-4 mb-8">
                 <button className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors text-white">

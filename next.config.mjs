@@ -2,10 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    typedRoutes: true
+    optimizePackageImports: ['lucide-react']
   },
   images: {
-    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -25,12 +24,7 @@ const nextConfig = {
       }
     ],
     minimumCacheTTL: 60,
-  },
-  logging: {
-    fetches: {
-      fullUrl: true,
-    },
-  },
+  }
 };
 
 export default nextConfig;

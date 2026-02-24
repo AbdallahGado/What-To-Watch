@@ -1,0 +1,45 @@
+{
+  "node": {
+    "e1eaf53a02fd4e431f40acb556bb244590bea70a": {
+      "workers": {
+        "app/what-to-watch/page": "[project]/.next-internal/server/app/what-to-watch/page/actions.js { ACTIONS_MODULE0 => \"[project]/node_modules/@clerk/nextjs/dist/esm/app-router/server-actions.js [app-rsc] (ecmascript, action, ecmascript)\", ACTIONS_MODULE1 => \"[project]/node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js [app-rsc] (ecmascript, action, ecmascript)\" } [app-rsc] (ecmascript)"
+      },
+      "layer": {
+        "app/what-to-watch/page": "actionBrowser"
+      }
+    },
+    "c68a6a9a5af732c89679efdbfc7867e2bca50904": {
+      "workers": {
+        "app/what-to-watch/page": "[project]/.next-internal/server/app/what-to-watch/page/actions.js { ACTIONS_MODULE0 => \"[project]/node_modules/@clerk/nextjs/dist/esm/app-router/server-actions.js [app-rsc] (ecmascript, action, ecmascript)\", ACTIONS_MODULE1 => \"[project]/node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js [app-rsc] (ecmascript, action, ecmascript)\" } [app-rsc] (ecmascript)"
+      },
+      "layer": {
+        "app/what-to-watch/page": "actionBrowser"
+      }
+    },
+    "bee98320fa7fcd8cbb1933ec3ed4a8df3d3eb7bd": {
+      "workers": {
+        "app/what-to-watch/page": "[project]/.next-internal/server/app/what-to-watch/page/actions.js { ACTIONS_MODULE0 => \"[project]/node_modules/@clerk/nextjs/dist/esm/app-router/server-actions.js [app-rsc] (ecmascript, action, ecmascript)\", ACTIONS_MODULE1 => \"[project]/node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js [app-rsc] (ecmascript, action, ecmascript)\" } [app-rsc] (ecmascript)"
+      },
+      "layer": {
+        "app/what-to-watch/page": "actionBrowser"
+      }
+    },
+    "242e7ea905a8dc9d2da24f9e149b6ff779d9882b": {
+      "workers": {
+        "app/what-to-watch/page": "[project]/.next-internal/server/app/what-to-watch/page/actions.js { ACTIONS_MODULE0 => \"[project]/node_modules/@clerk/nextjs/dist/esm/app-router/server-actions.js [app-rsc] (ecmascript, action, ecmascript)\", ACTIONS_MODULE1 => \"[project]/node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js [app-rsc] (ecmascript, action, ecmascript)\" } [app-rsc] (ecmascript)"
+      },
+      "layer": {
+        "app/what-to-watch/page": "actionBrowser"
+      }
+    },
+    "40cfbd078047d27a88386f3487a0d2ffecdbb010": {
+      "workers": {
+        "app/what-to-watch/page": "[project]/.next-internal/server/app/what-to-watch/page/actions.js { ACTIONS_MODULE0 => \"[project]/node_modules/@clerk/nextjs/dist/esm/app-router/server-actions.js [app-rsc] (ecmascript, action, ecmascript)\", ACTIONS_MODULE1 => \"[project]/node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js [app-rsc] (ecmascript, action, ecmascript)\" } [app-rsc] (ecmascript)"
+      },
+      "layer": {
+        "app/what-to-watch/page": "actionBrowser"
+      }
+    }
+  },
+  "edge": {}
+}

@@ -1,93 +1,99 @@
-// TMDB API client - server-only utilities for fetching movie/TV data
-// All functions are async and should be called only from server components or API routes.
-
-const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-
-// Ensure TMDB key is loaded. Next.js should load `.env.local`, but in
-// some dev setups it may not be present in `process.env` at runtime.
 import fs from 'fs';
 import path from 'path';
+import type {
+  TMDBMedia,
+  TMDBMediaDetails,
+  TMDBMediaType,
+  TMDBPerson,
+  TMDBPersonDetails,
+  TMDBVideo
+} from './tmdb-types';
+import { TRENDING, TOP_RATED, ACTORS, CONTENT } from '@/app/data/mockData';
 
-let TMDB_API_KEY = process.env.TMDB_API_KEY;
+export type {
+  TMDBMedia,
+  TMDBMediaDetails,
+  TMDBMediaType,
+  TMDBPerson,
+  TMDBPersonDetails,
+  TMDBVideo
+} from './tmdb-types';
 
-if (!TMDB_API_KEY) {
+// TMDB API client - server-only utilities for fetching movie/TV data.
+// All functions are async and should be called only from server components or API routes.
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const DEFAULT_REVALIDATE_SECONDS = 3600; // Increased to 1 hour for better performance
+
+let cachedApiKey = process.env.TMDB_API_KEY ?? null;
+let didReadEnvFile = false;
+let didWarnMissing = false;
+
+function readApiKeyFromEnvFile(): string | null {
   try {
-    const p = path.resolve(process.cwd(), '.env.local');
-    if (fs.existsSync(p)) {
-      const raw = fs.readFileSync(p, 'utf8');
-      const match = raw.match(/TMDB_API_KEY\s*=\s*\"?([^\"\n\r]+)\"?/);
-      if (match && match[1]) {
-        TMDB_API_KEY = match[1].trim();
-        process.env.TMDB_API_KEY = TMDB_API_KEY;
-      }
+    const envPath = path.resolve(process.cwd(), '.env.local');
+    if (!fs.existsSync(envPath)) return null;
+    const raw = fs.readFileSync(envPath, 'utf8');
+    const match = raw.match(/TMDB_API_KEY\s*=\s*\"?([^\"\n\r]+)\"?/);
+    return match && match[1] ? match[1].trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function getTmdbApiKey() {
+  if (cachedApiKey) return cachedApiKey;
+  if (!didReadEnvFile) {
+    didReadEnvFile = true;
+    const fromFile = readApiKeyFromEnvFile();
+    if (fromFile) {
+      cachedApiKey = fromFile;
+      process.env.TMDB_API_KEY = fromFile;
+      return cachedApiKey;
     }
-  } catch (e) {
-    // ignore
   }
 
-  if (!TMDB_API_KEY) {
-    console.warn(
-      'TMDB_API_KEY is not set. TMDB requests will fail. Set it in .env.local'
-    );
+  if (!didWarnMissing) {
+    console.warn('TMDB_API_KEY is not set. TMDB requests will fail. Set it in .env.local.');
+    didWarnMissing = true;
   }
+
+  return null;
+}
+
+export function hasTmdbApiKey() {
+  return Boolean(getTmdbApiKey());
 }
 
 // Development mock data fallback (used only when TMDB key is missing)
-import { TRENDING, TOP_RATED, ACTORS, CONTENT } from '@/app/data/mockData';
-const USE_MOCK = process.env.USE_MOCK_DATA === 'true' || !TMDB_API_KEY;
+const FORCE_MOCK = process.env.USE_MOCK_DATA === 'true';
+const USE_MOCK = FORCE_MOCK ? true : !hasTmdbApiKey();
 
-type TMDBMediaType = 'movie' | 'tv';
+type TmdbListResponse<T> = { results: T[] };
 
-export interface TMDBMedia {
-  id: number;
-  media_type?: TMDBMediaType;
-  title?: string;
-  name?: string;
-  overview: string;
-  poster_path: string | null;
-  backdrop_path: string | null;
-  vote_average: number;
-  release_date?: string;
-  first_air_date?: string;
-  original_language?: string;
-}
+type FetchOptions<T> = {
+  fallback?: T;
+  revalidate?: number;
+};
 
-export interface TMDBPerson {
-  id: number;
-  name: string;
-  profile_path: string | null;
-  known_for_department: string;
-  biography?: string;
+function assignMediaType(items: TMDBMedia[], mediaType: TMDBMediaType) {
+  return items.map((item) => ({
+    ...item,
+    media_type: item.media_type ?? mediaType
+  }));
 }
 
 // Request deduplication cache to prevent duplicate API calls
-const requestCache = new Map<string, Promise<any>>();
+const requestCache = new Map<string, Promise<unknown>>();
 
 async function tmdbFetch<T>(
   path: string,
   searchParams?: Record<string, string | number | undefined>,
-  fallback?: T
+  options: FetchOptions<T> = {}
 ): Promise<T> {
-  // Resolve API key at call-time: prefer process.env but fall back to reading
-  // `.env.local` on disk. This handles dev setups where Next didn't populate
-  // `process.env` for some reason.
-  let apiKey = process.env.TMDB_API_KEY ?? TMDB_API_KEY;
+  const apiKey = getTmdbApiKey();
   if (!apiKey) {
-    try {
-      const p = path.resolve(process.cwd(), '.env.local');
-      if (fs.existsSync(p)) {
-        const raw = fs.readFileSync(p, 'utf8');
-        const match = raw.match(/TMDB_API_KEY\s*=\s*\"?([^\"\n\r]+)\"?/);
-        if (match && match[1]) apiKey = match[1].trim();
-      }
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  if (!apiKey) {
-    if (fallback !== undefined) return fallback;
-    return {} as T;
+    if (options.fallback !== undefined) return options.fallback;
+    throw new Error('TMDB_API_KEY is not set.');
   }
 
   const url = new URL(`${TMDB_BASE_URL}${path}`);
@@ -106,33 +112,49 @@ async function tmdbFetch<T>(
 
   // Return cached promise if request is in flight to deduplicate requests
   if (requestCache.has(cacheKey)) {
-    return requestCache.get(cacheKey)!;
+    return requestCache.get(cacheKey)! as Promise<T>;
   }
 
-  const fetchPromise = fetch(url.toString(), {
-    next: { revalidate: 60 }
-  }).then(async (res) => {
-    if (!res.ok) {
-      if (fallback !== undefined) {
-        return fallback;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+
+  try {
+    const fetchPromise = fetch(url.toString(), {
+      next: { revalidate: options.revalidate ?? DEFAULT_REVALIDATE_SECONDS },
+      signal: controller.signal
+    }).then(async (res) => {
+      clearTimeout(timeoutId);
+      if (!res.ok) {
+        if (options.fallback !== undefined) {
+          return options.fallback;
+        }
+        throw new Error(`TMDB request failed: ${res.status} ${res.statusText}`);
       }
-      throw new Error(`TMDB request failed: ${res.status} ${res.statusText}`);
-    }
-    return res.json() as Promise<T>;
-  }).catch((error) => {
-    // Remove from cache on error
-    requestCache.delete(cacheKey);
-    throw error;
-  });
+      return res.json() as Promise<T>;
+    }).catch((error) => {
+      clearTimeout(timeoutId);
+      // Remove from cache on error
+      requestCache.delete(cacheKey);
+      if (options.fallback !== undefined) {
+          console.warn(`TMDB fetch failed for ${path}, using fallback.`, error.message);
+          return options.fallback;
+      }
+      throw error;
+    });
 
-  requestCache.set(cacheKey, fetchPromise);
+    requestCache.set(cacheKey, fetchPromise);
 
-  // Clean up cache after request completes
-  fetchPromise.finally(() => {
-    requestCache.delete(cacheKey);
-  });
+    // Clean up cache after request completes
+    fetchPromise.finally(() => {
+      requestCache.delete(cacheKey);
+    });
 
-  return fetchPromise;
+    return fetchPromise;
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (options.fallback !== undefined) return options.fallback;
+    throw err;
+  }
 }
 
 export async function getTrending(): Promise<TMDBMedia[]> {
@@ -148,18 +170,19 @@ export async function getTrending(): Promise<TMDBMedia[]> {
     })) as TMDBMedia[];
   }
 
-  const data = await tmdbFetch<{ results: TMDBMedia[] }>(
+  const data = await tmdbFetch<TmdbListResponse<TMDBMedia>>(
     '/trending/all/week',
     undefined,
-    { results: [] }
+    { fallback: { results: [] } }
   );
-  return data.results;
+  return data.results.filter((item) => item.media_type === 'movie' || item.media_type === 'tv');
 }
 
 export async function getTopRatedMovies(): Promise<TMDBMedia[]> {
   if (USE_MOCK) {
     return TOP_RATED.map((c) => ({
       id: Number(c.id),
+      media_type: 'movie',
       title: c.title,
       overview: c.description,
       poster_path: c.poster ?? null,
@@ -168,12 +191,12 @@ export async function getTopRatedMovies(): Promise<TMDBMedia[]> {
     })) as TMDBMedia[];
   }
 
-  const data = await tmdbFetch<{ results: TMDBMedia[] }>(
+  const data = await tmdbFetch<TmdbListResponse<TMDBMedia>>(
     '/movie/top_rated',
     undefined,
-    { results: [] }
+    { fallback: { results: [] } }
   );
-  return data.results;
+  return assignMediaType(data.results, 'movie');
 }
 
 export async function getPopularPeople(): Promise<TMDBPerson[]> {
@@ -186,55 +209,119 @@ export async function getPopularPeople(): Promise<TMDBPerson[]> {
     })) as TMDBPerson[];
   }
 
-  const data = await tmdbFetch<{ results: TMDBPerson[] }>(
+  const data = await tmdbFetch<TmdbListResponse<TMDBPerson>>(
     '/person/popular',
     undefined,
-    { results: [] }
+    { fallback: { results: [] } }
   );
   return data.results;
 }
 
 export async function searchMulti(query: string): Promise<TMDBMedia[]> {
-  const data = await tmdbFetch<{ results: TMDBMedia[] }>(
+  const data = await tmdbFetch<TmdbListResponse<TMDBMedia>>(
     '/search/multi',
     {
       query,
       include_adult: 0
     },
-    { results: [] }
+    { fallback: { results: [] } }
   );
-  return data.results;
+  return data.results.filter((item) => item.media_type === 'movie' || item.media_type === 'tv');
 }
 
-export async function getMovieDetails(id: string) {
+export async function getMovieDetails(id: string): Promise<TMDBMediaDetails | null> {
   if (USE_MOCK) {
     const c = CONTENT.find((x) => x.id === String(id) || Number(x.id) === Number(id));
-    if (!c) return {} as any;
+    if (!c) return null;
     return {
       id: Number(c.id),
+      media_type: c.type === 'series' ? 'tv' : 'movie',
       title: c.title,
       overview: c.description,
       poster_path: c.poster ?? null,
       backdrop_path: c.backdrop ?? null,
       vote_average: c.rating,
+      release_date: `${c.year}-01-01`,
       videos: { results: [{ key: 'dQw4w9WgXcQ', type: 'Trailer' }] },
-      credits: { cast: c.cast.map((a) => ({ id: a.id, name: a.name, profile_path: a.image })) }
-    } as any;
+      credits: {
+        cast: c.cast.map((a) => ({ id: Number(a.id), name: a.name, profile_path: a.image ?? null })),
+        crew: []
+      },
+      similar: { results: [] }
+    };
   }
 
-  return tmdbFetch(`/movie/${id}`, { append_to_response: 'videos,credits,similar' }, {} as any);
+  const data = await tmdbFetch<TMDBMediaDetails | null>(
+    `/movie/${id}`,
+    { append_to_response: 'videos,credits,similar' },
+    { fallback: null }
+  );
+  if (!data || !data.id) return null;
+  const similar = data.similar?.results
+    ? { results: assignMediaType(data.similar.results, 'movie') }
+    : data.similar;
+  return { ...data, media_type: data.media_type ?? 'movie', similar };
 }
 
-export async function getTvDetails(id: string) {
-  return tmdbFetch(`/tv/${id}`, { append_to_response: 'videos,credits,similar' }, {} as any);
+export async function getTvDetails(id: string): Promise<TMDBMediaDetails | null> {
+  if (USE_MOCK) {
+    const c = CONTENT.find((x) => x.type === 'series' && (x.id === String(id) || Number(x.id) === Number(id)));
+    if (!c) return null;
+    return {
+      id: Number(c.id),
+      media_type: 'tv',
+      name: c.title,
+      overview: c.description,
+      poster_path: c.poster ?? null,
+      backdrop_path: c.backdrop ?? null,
+      vote_average: c.rating,
+      first_air_date: `${c.year}-01-01`,
+      videos: { results: [{ key: 'dQw4w9WgXcQ', type: 'Trailer' }] },
+      credits: {
+        cast: c.cast.map((a) => ({ id: Number(a.id), name: a.name, profile_path: a.image ?? null })),
+        crew: []
+      },
+      similar: { results: [] }
+    };
+  }
+
+  const data = await tmdbFetch<TMDBMediaDetails | null>(
+    `/tv/${id}`,
+    { append_to_response: 'videos,credits,similar' },
+    { fallback: null }
+  );
+  if (!data || !data.id) return null;
+  const similar = data.similar?.results
+    ? { results: assignMediaType(data.similar.results, 'tv') }
+    : data.similar;
+  return { ...data, media_type: data.media_type ?? 'tv', similar };
 }
 
-export async function getPersonDetails(id: string) {
-  return tmdbFetch(`/person/${id}`, { append_to_response: 'combined_credits' }, {} as any);
+export async function getPersonDetails(id: string): Promise<TMDBPersonDetails | null> {
+  if (USE_MOCK) {
+    const actor = ACTORS.find((a) => a.id === String(id));
+    if (!actor) return null;
+    return {
+      id: Number(actor.id),
+      name: actor.name,
+      profile_path: actor.image ?? null,
+      known_for_department: 'Acting',
+      combined_credits: { cast: [] }
+    };
+  }
+
+  const data = await tmdbFetch<TMDBPersonDetails | null>(
+    `/person/${id}`,
+    { append_to_response: 'combined_credits' },
+    { fallback: null }
+  );
+  return data && data.id ? data : null;
 }
+
+type RecommendationMediaType = TMDBMediaType | 'any' | '';
 
 export interface RecommendationInput {
-  type?: 'movie' | 'tv' | 'any' | '';
+  type?: RecommendationMediaType;
   mood: string;
   genres: number[];
   runtimeMinutes?: number;
@@ -248,6 +335,7 @@ export async function getUpcomingMovies(): Promise<TMDBMedia[]> {
   if (USE_MOCK) {
     return CONTENT.slice(3, 6).map((c) => ({
       id: Number(c.id),
+      media_type: 'movie',
       title: c.title,
       overview: c.description,
       poster_path: c.poster ?? null,
@@ -256,18 +344,19 @@ export async function getUpcomingMovies(): Promise<TMDBMedia[]> {
     })) as TMDBMedia[];
   }
 
-  const data = await tmdbFetch<{ results: TMDBMedia[] }>(
+  const data = await tmdbFetch<TmdbListResponse<TMDBMedia>>(
     '/movie/upcoming',
     undefined,
-    { results: [] }
+    { fallback: { results: [] } }
   );
-  return data.results;
+  return assignMediaType(data.results, 'movie');
 }
 
 export async function getNowPlayingMovies(): Promise<TMDBMedia[]> {
   if (USE_MOCK) {
     return CONTENT.slice(5, 7).map((c) => ({
       id: Number(c.id),
+      media_type: 'movie',
       title: c.title,
       overview: c.description,
       poster_path: c.poster ?? null,
@@ -276,21 +365,21 @@ export async function getNowPlayingMovies(): Promise<TMDBMedia[]> {
     })) as TMDBMedia[];
   }
 
-  const data = await tmdbFetch<{ results: TMDBMedia[] }>(
+  const data = await tmdbFetch<TmdbListResponse<TMDBMedia>>(
     '/movie/now_playing',
     undefined,
-    { results: [] }
+    { fallback: { results: [] } }
   );
-  return data.results;
+  return assignMediaType(data.results, 'movie');
 }
 
 export async function getTopRatedTv(): Promise<TMDBMedia[]> {
-  const data = await tmdbFetch<{ results: TMDBMedia[] }>(
+  const data = await tmdbFetch<TmdbListResponse<TMDBMedia>>(
     '/tv/top_rated',
     undefined,
-    { results: [] }
+    { fallback: { results: [] } }
   );
-  return data.results;
+  return assignMediaType(data.results, 'tv');
 }
 
 export async function getDiscoverMovies(genre?: string, sort: string = 'popularity.desc', page: number = 1): Promise<TMDBMedia[]> {
@@ -306,12 +395,12 @@ export async function getDiscoverMovies(genre?: string, sort: string = 'populari
     params.with_genres = genre;
   }
 
-  const data = await tmdbFetch<{ results: TMDBMedia[] }>(
+  const data = await tmdbFetch<TmdbListResponse<TMDBMedia>>(
     '/discover/movie',
     params,
-    { results: [] }
+    { fallback: { results: [] } }
   );
-  return data.results;
+  return assignMediaType(data.results, 'movie');
 }
 
 export async function getDiscoverTv(genre?: string, sort: string = 'popularity.desc', page: number = 1): Promise<TMDBMedia[]> {
@@ -326,115 +415,128 @@ export async function getDiscoverTv(genre?: string, sort: string = 'popularity.d
     params.with_genres = genre;
   }
 
-  const data = await tmdbFetch<{ results: TMDBMedia[] }>(
+  const data = await tmdbFetch<TmdbListResponse<TMDBMedia>>(
     '/discover/tv',
     params,
-    { results: [] }
+    { fallback: { results: [] } }
   );
-  return data.results;
+  return assignMediaType(data.results, 'tv');
 }
 
-export async function getMovieVideos(id: number): Promise<{ key: string; type: string }[]> {
+export async function getMovieVideos(id: number): Promise<TMDBVideo[]> {
   try {
     if (USE_MOCK) {
       // Provide a dummy trailer key for mock content so hero can try to load video
       return [{ key: 'dQw4w9WgXcQ', type: 'Trailer' }];
     }
 
-    const data = await tmdbFetch<{ results?: { key: string; type: string }[] }>(`/movie/${id}/videos`);
+    const data = await tmdbFetch<TmdbListResponse<TMDBVideo>>(
+      `/movie/${id}/videos`,
+      undefined,
+      { fallback: { results: [] } }
+    );
     return data.results ?? [];
-  } catch (e) {
+  } catch {
     return [];
   }
 }
 
-export async function getTvVideos(id: number): Promise<{ key: string; type: string }[]> {
+export async function getTvVideos(id: number): Promise<TMDBVideo[]> {
   try {
     if (USE_MOCK) {
       return [{ key: 'dQw4w9WgXcQ', type: 'Trailer' }];
     }
 
-    const data = await tmdbFetch<{ results?: { key: string; type: string }[] }>(`/tv/${id}/videos`);
+    const data = await tmdbFetch<TmdbListResponse<TMDBVideo>>(
+      `/tv/${id}/videos`,
+      undefined,
+      { fallback: { results: [] } }
+    );
     return data.results ?? [];
-  } catch (e) {
+  } catch {
     return [];
   }
 }
 
-interface SmartRecommendInput extends RecommendationInput {
-    type?: 'movie' | 'tv' | 'any' | '';
-}
+import { MOOD_CONFIGS, MoodConfig } from './recommendation-data';
+import { MoodId } from '@/features/recommend/types';
 
-export async function getSmartRecommendations(input: SmartRecommendInput): Promise<TMDBMedia[]> {
-  const { type, mood, genres, runtimeMinutes, withFriends, language } = input;
+// ... existing code ...
 
-  const voteAverageGte = mood === 'light' ? 6 : 7;
-  const sortBy = mood === 'experimental' ? 'vote_count.desc' : 'popularity.desc';
-  const voteCountGte = withFriends ? 300 : 50;
-  
-  const commonParams: any = {
-    with_genres: genres.join(','),
-    sort_by: sortBy,
+export async function getSmartRecommendations(input: RecommendationInput): Promise<TMDBMedia[]> {
+  const { type, mood, genres: userGenres, runtimeMinutes, withFriends, language } = input;
+  const config = MOOD_CONFIGS[mood as MoodId] || MOOD_CONFIGS.chill;
+
+  const targetGenres = Array.from(new Set([...config.genres, ...userGenres]));
+  const voteAverageGte = Math.max(config.voteAverageGte, withFriends ? 7.2 : 6.0);
+  const voteCountGte = withFriends ? 500 : 100;
+
+  const commonParams: Record<string, string | number> = {
+    with_genres: targetGenres.join(','),
     'vote_average.gte': voteAverageGte,
-    'vote_count.gte': voteCountGte
+    'vote_count.gte': voteCountGte,
+    sort_by: 'popularity.desc',
   };
 
   if (language === 'english') {
-      commonParams.with_original_language = 'en';
+    commonParams.with_original_language = 'en';
   }
 
-  // Helper to fetch movies
-  const fetchMovies = async () => {
-      const params = { ...commonParams };
-      // Runtime works reliably for movies
-      if (runtimeMinutes) {
-          params['with_runtime.lte'] = runtimeMinutes;
-      }
-      return tmdbFetch<{ results: TMDBMedia[] }>(
-        '/discover/movie',
-        params,
-        { results: [] }
-      );
+  if (config.era) {
+    commonParams['primary_release_date.gte'] = `${config.era.start}-01-01`;
+    commonParams['primary_release_date.lte'] = `${config.era.end}-12-31`;
+  }
+
+  // Fetch a larger pool of items to score (e.g., top 40)
+  const fetchPool = async (mediaType: 'movie' | 'tv') => {
+    const params = { ...commonParams };
+    if (mediaType === 'movie' && runtimeMinutes) {
+      params['with_runtime.lte'] = runtimeMinutes;
+    }
+
+    const data = await tmdbFetch<TmdbListResponse<TMDBMedia>>(
+      `/discover/${mediaType}`,
+      params,
+      { fallback: { results: [] } }
+    );
+    return assignMediaType(data.results, mediaType);
   };
 
-  // Helper to fetch TV
-  const fetchTv = async () => {
-      const params = { ...commonParams };
-      // TV runtime is per episode, usually "runtimeMinutes" from UI is session length
-      // If user wants "Short" (<90m), most TV eps fit. 
-      // If user wants "Long" (>150m), that's harder to filter by ep length.
-      // We'll skip runtime filter for TV unless it's very short to avoid 2 min clips?
-      // Actually TMDB discover TV `with_runtime` is episode runtime.
-      if (runtimeMinutes && runtimeMinutes < 60) {
-           params['with_runtime.lte'] = runtimeMinutes; 
-      }
-      return tmdbFetch<{ results: TMDBMedia[] }>(
-        '/discover/tv',
-        params,
-        { results: [] }
-      );
-  };
-
-  let results: TMDBMedia[] = [];
-
+  let pool: TMDBMedia[] = [];
   if (type === 'movie') {
-      const data = await fetchMovies();
-      results = data.results;
+    pool = await fetchPool('movie');
   } else if (type === 'tv') {
-      const data = await fetchTv();
-      results = data.results;
+    pool = await fetchPool('tv');
   } else {
-      // "Surprise Me" -> Fetch both and mix
-      const [movies, tv] = await Promise.all([fetchMovies(), fetchTv()]);
-      
-      // Simple Interleaving or Sorting by Popularity
-      // Let's mix them 50/50 then sort by vote/popularity
-      const combined = [...movies.results, ...tv.results];
-      // Shuffle slightly or sort by popularity?
-      // Let's sort by popularity desc
-      results = combined.sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+    const [movies, tv] = await Promise.all([fetchPool('movie'), fetchPool('tv')]);
+    pool = [...movies, ...tv];
   }
 
-  return results;
+  // Score the results
+  const scoredResults = pool.map((item) => {
+    let score = 0;
+
+    // 1. Genre Overlap (30 pts)
+    const itemGenres = item.genre_ids || [];
+    const matchedGenres = targetGenres.filter(g => itemGenres.includes(g));
+    score += (matchedGenres.length / targetGenres.length) * 30;
+
+    // 2. Rating & Popularity (20 pts)
+    score += (item.vote_average || 0) * 1.5; // (Avg 7-8 -> 10.5-12 pts)
+    score += Math.min((item.vote_count || 0) / 2000, 5); // (Max 5 pts)
+
+    // 3. User specifics (10 pts)
+    if (userGenres.some(g => itemGenres.includes(g))) score += 10;
+
+    // 4. Group Fit (5 pts)
+    if (withFriends && (item.vote_average || 0) > 7.5) score += 5;
+
+    return { ...item, matchScore: score };
+  });
+
+  // Sort and take top 12
+  return scoredResults
+    .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0))
+    .slice(0, 12);
 }
 

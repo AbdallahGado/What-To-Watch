@@ -1,8 +1,9 @@
 'use client';
 
-import React, { memo } from 'react';
-import { motion } from 'framer-motion';
+import { memo } from 'react';
+import Image from 'next/image';
 import { Star } from 'lucide-react';
+import { getPosterUrl } from '@/lib/tmdb-images';
 
 interface TMDBCardData {
   id: number;
@@ -24,68 +25,79 @@ interface MovieCardProps {
   tmdb?: TMDBCardData;
   onClick?: () => void;
   variant?: 'portrait' | 'landscape';
+  priority?: boolean;
 }
 
-const MovieCardComponent = ({ content, tmdb, onClick, variant = 'portrait' }: MovieCardProps) => {
+const MovieCardComponent = ({ content, tmdb, onClick, variant = 'portrait', priority = false }: MovieCardProps) => {
   const title = content?.title ?? tmdb?.title ?? '';
   const rating = content?.rating ?? tmdb?.vote_average ?? 0;
   const year = content?.year ?? tmdb?.year ?? '';
+  const isInteractive = Boolean(onClick);
+  const ratingLabel = rating > 0 ? rating.toFixed(1) : 'NR';
 
-  function makeImageUrl(path?: string | null) {
-    if (!path) return undefined;
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    // TMDB poster paths
-    return `https://image.tmdb.org/t/p/w500${path}`;
-  }
-
-  const imageUrl = makeImageUrl(content?.poster ?? tmdb?.poster_path ?? null);
+  const imageUrl = getPosterUrl(content?.poster ?? tmdb?.poster_path ?? null, 'w500');
 
   const sizeClass = variant === 'portrait' ? 'w-[180px] md:w-[220px]' : 'w-[300px] md:w-[380px]';
   const aspectClass = variant === 'portrait' ? 'aspect-[2/3]' : 'aspect-video';
+  const sizes =
+    variant === 'portrait'
+      ? '(max-width: 768px) 45vw, (max-width: 1200px) 22vw, 220px'
+      : '(max-width: 768px) 80vw, 380px';
 
   return (
-    <motion.div 
-      whileHover={{ y: -4, scale: 1.01 }}
-      transition={{ duration: 0.2 }}
-      className={`relative group cursor-pointer flex-shrink-0 ${sizeClass}`}
+    <div
+      className={`relative group flex-shrink-0 ${sizeClass} ${isInteractive ? 'cursor-pointer' : ''}`}
       onClick={onClick}
-      role="button"
-      tabIndex={0}
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          onClick?.();
-        }
+        if (!isInteractive) return;
+        if (e.key === 'Enter' || e.key === ' ') onClick?.();
       }}
-      aria-label={`${title} - Rating: ${rating.toFixed(1)}`}
+      aria-label={isInteractive ? `${title} - Rating: ${ratingLabel}` : undefined}
     >
-      <div className={`relative overflow-hidden rounded-2xl bg-slate-900 border border-white/5 transition-all duration-300 group-hover:border-white/10 ${aspectClass}`}>
+      <div
+        className={`relative overflow-hidden rounded-[26px] bg-slate-900/80 border border-white/10 shadow-xl shadow-black/50 transition-[transform,border-color,box-shadow] duration-200 ease-out group-hover:border-white/20 group-hover:shadow-2xl group-hover:shadow-black/70 ${aspectClass} transform-gpu group-hover:-translate-y-1 will-change-transform`}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/35 opacity-80" />
         {imageUrl ? (
-          <img
+          <Image
             src={imageUrl}
             alt={title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-90 group-hover:opacity-100"
-            loading="lazy"
+            fill
+            sizes={sizes}
+            priority={priority}
+            className="object-cover transition-transform duration-300 ease-out group-hover:scale-[1.01] opacity-95 group-hover:opacity-100 transform-gpu"
           />
         ) : (
           <div className="w-full h-full bg-slate-800 flex items-center justify-center text-white/40 text-sm">
             No Image Available
           </div>
         )}
-        
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60" />
-        
-        <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
-          <h3 className="text-white font-medium text-sm md:text-base leading-tight mb-2 line-clamp-2">{title}</h3>
-          <div className="flex items-center justify-between text-[10px] text-white/70 font-medium">
-            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/10 backdrop-blur-md">
-              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" aria-hidden="true" />
-              <span className="text-white">{rating.toFixed(1)}</span>
-            </span>
-            <span>{year}</span>
+
+        <div className="absolute top-3 left-3 flex items-center gap-1 rounded-full bg-black/65 border border-white/10 px-2.5 py-1 text-[11px] text-white/90">
+          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" aria-hidden="true" />
+          <span>{ratingLabel}</span>
+        </div>
+        {year && (
+          <div className="absolute top-3 right-3 rounded-full bg-black/65 border border-white/10 px-2.5 py-1 text-[11px] text-white/80">
+            {year}
           </div>
+        )}
+
+      </div>
+
+      <div className="mt-3 min-h-[3.25rem]">
+        <h3 className="text-white font-medium text-sm md:text-base leading-tight line-clamp-2 min-h-[2.5rem]">
+          {title}
+        </h3>
+        <div className="mt-1 h-4 text-[11px] text-white/70 font-medium opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          <span className="uppercase tracking-[0.2em] text-white/50">Details</span>
+          <span className="mx-2 text-white/30">•</span>
+          <span className="text-white/70">Open</span>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 

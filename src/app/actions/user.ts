@@ -65,7 +65,7 @@ export async function updateCinephileDNA(genres: string[]) {
     'Thriller': 'thriller'
   }
 
-  const updateData: any = {}
+  const updateData: Record<string, { increment: number }> = {}
   genres.forEach(g => {
     const field = genreMap[g]
     if (field) {

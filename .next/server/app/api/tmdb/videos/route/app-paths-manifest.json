@@ -1,0 +1,3 @@
+{
+  "/api/tmdb/videos/route": "app/api/tmdb/videos/route.js"
+}

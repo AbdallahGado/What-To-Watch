@@ -1,15 +1,15 @@
 'use client';
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, memo } from 'react';
 
-interface SectionProps {
+interface SectionProps<T> {
   title: string;
   children?: ReactNode;
-  items?: any[];
-  renderItem?: (item: any) => ReactNode;
+  items?: T[];
+  renderItem?: (item: T) => ReactNode;
 }
 
-export const Section = ({ title, children, items, renderItem }: SectionProps) => {
+function SectionComponent<T>({ title, children, items, renderItem }: SectionProps<T>) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -46,15 +46,23 @@ export const Section = ({ title, children, items, renderItem }: SectionProps) =>
          <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
 
         <div ref={scrollRef} className="overflow-x-auto hide-scrollbar pb-12 px-6 -mx-6 scroll-smooth">
-          <div className="flex gap-6 px-6 max-w-7xl mx-auto">
-            {children || (items && items.length > 0 && items.map((item, idx) => (
-              <div key={item.id ?? idx} className="flex-shrink-0 w-48">
-                {renderItem?.(item)}
-              </div>
-            )))}
+          <div className="flex gap-10 px-6 py-4 max-w-7xl mx-auto">
+            {children ||
+              (items &&
+                items.length > 0 &&
+                items.map((item, idx) => (
+                  <div
+                    key={(item as { id?: string | number })?.id ?? idx}
+                    className="flex-shrink-0 w-[200px] md:w-[240px] px-2"
+                  >
+                    {renderItem?.(item)}
+                  </div>
+                )))}
           </div>
         </div>
       </div>
     </div>
   );
-};
+}
+
+export const Section = memo(SectionComponent) as typeof SectionComponent;

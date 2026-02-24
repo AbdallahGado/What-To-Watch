@@ -5,9 +5,7 @@ import { Navbar } from '@/app/components/Navbar';
 import { MediaGrid } from '@/app/components/MediaGrid';
 import { FilterBar } from '@/app/components/FilterBar';
 import { Pagination } from '@/app/components/Pagination';
-import { ScrollReveal } from '@/app/components/ScrollReveal';
-import { useState, useEffect } from 'react';
-import { TMDBMedia } from '@/lib/tmdb';
+import { useMediaListing } from '@/hooks/useMediaListing';
 
 const GENRES = [
   { id: '28', label: 'Action' },
@@ -37,41 +35,17 @@ const SORT_OPTIONS = [
 ];
 
 export default function MoviesPage() {
-  const [activeGenre, setActiveGenre] = useState('all');
-  const [activeSort, setActiveSort] = useState('popularity.desc');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [movies, setMovies] = useState<TMDBMedia[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Reset page when filter/sort changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeGenre, activeSort]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(
-          `/api/media?type=movie&genre=${encodeURIComponent(activeGenre)}&sort=${encodeURIComponent(activeSort)}&page=${currentPage}`
-        );
-        const data = (await response.json()) as TMDBMedia[];
-        // Add a small artificial delay to show off the skeleton blink
-        setTimeout(() => {
-             setMovies(data);
-             setIsLoading(false);
-             window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top on page change
-        }, 300);
-      } catch (error) {
-        setError(error instanceof Error ? error.message : 'Failed to load movies');
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [activeGenre, activeSort, currentPage]);
+  const {
+    activeGenre,
+    activeSort,
+    currentPage,
+    items: movies,
+    isLoading,
+    error,
+    setActiveGenre,
+    setActiveSort,
+    setCurrentPage
+  } = useMediaListing({ type: 'movie' });
 
   return (
     <div className="min-h-screen bg-background text-white pb-20">
@@ -87,12 +61,12 @@ export default function MoviesPage() {
         </div>
 
         <FilterBar
-            genres={GENRES}
-            sortOptions={SORT_OPTIONS}
-            activeGenre={activeGenre}
-            activeSort={activeSort}
-            onGenreChange={setActiveGenre}
-            onSortChange={setActiveSort}
+          genres={GENRES}
+          sortOptions={SORT_OPTIONS}
+          activeGenre={activeGenre}
+          activeSort={activeSort}
+          onGenreChange={setActiveGenre}
+          onSortChange={setActiveSort}
         />
 
         {error && (
@@ -109,10 +83,7 @@ export default function MoviesPage() {
 
         <MediaGrid items={movies} isLoading={isLoading} />
         
-        <Pagination 
-            currentPage={currentPage} 
-            onPageChange={setCurrentPage} 
-        />
+        <Pagination currentPage={currentPage} onPageChange={setCurrentPage} />
       </div>
     </div>
   );

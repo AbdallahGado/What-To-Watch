@@ -1,13 +1,7 @@
-import { NextResponse } from 'next/server';
+import { clerkMiddleware } from '@clerk/nextjs/server';
 
-// Development middleware: allow Next.js to handle rendering.
-// Previously this returned an empty Response which prevented the
-// app from rendering any HTML. Return NextResponse.next() so
-// requests continue to the Next.js handlers.
-export function middleware(req: Request) {
-  return NextResponse.next();
-}
+export default clerkMiddleware();
 
 export const config = {
-  matcher: ['/((?!_next|static|favicon.ico).*)'],
+  matcher: ['/((?!_next|api|.*\\..*).*)', '/api/reviews(.*)', '/api/webhooks/clerk(.*)'],
 };

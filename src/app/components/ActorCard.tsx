@@ -1,6 +1,9 @@
-import React, { memo, useCallback } from 'react';
+'use client';
+
+import { memo } from 'react';
 import Image from 'next/image';
-import { TMDBPerson } from '@/lib/tmdb';
+import type { TMDBPerson } from '@/lib/tmdb-types';
+import { getProfileUrl } from '@/lib/tmdb-images';
 
 interface ActorCardProps {
   actor?: {
@@ -8,38 +11,30 @@ interface ActorCardProps {
     name: string;
     image: string;
   };
-  person?: TMDBPerson & { image?: string };
+  person?: TMDBPerson & { image?: string | null };
   onClick?: () => void;
-}
-
-function makeImageUrl(path?: string | null) {
-  if (!path) return undefined;
-  if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  return `https://image.tmdb.org/t/p/w185${path}`;
 }
 
 const ActorCardComponent = ({ actor, person, onClick }: ActorCardProps) => {
   const name = actor?.name ?? person?.name ?? 'Unknown';
-  const imageSrc = makeImageUrl(actor?.image ?? (person?.image as any) ?? person?.profile_path ?? null);
+  const imageSrc = getProfileUrl(actor?.image ?? person?.image ?? person?.profile_path ?? null, 'w185');
+  const isInteractive = Boolean(onClick);
 
-  const handleClick = useCallback(() => {
-    onClick?.();
-  }, [onClick]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isInteractive) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      handleClick();
+      onClick?.();
     }
-  }, [handleClick]);
+  };
 
   return (
     <div
-      onClick={handleClick}
+      onClick={onClick}
       onKeyDown={handleKeyDown}
-      className="flex flex-col items-center gap-3 group cursor-pointer transition-transform hover:-translate-y-1"
-      role="button"
-      tabIndex={0}
+      className={`flex flex-col items-center gap-3 group transition-transform hover:-translate-y-1 ${isInteractive ? 'cursor-pointer' : ''}`}
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
       aria-label={`View profile for ${name}`}
     >
       <div className="relative w-24 h-24 rounded-full p-[2px] overflow-hidden transition-all duration-300 group-hover:scale-105">
@@ -79,5 +74,4 @@ export const ActorCard = memo(ActorCardComponent, (prevProps, nextProps) => {
     prevProps.onClick === nextProps.onClick
   );
 });
-
 

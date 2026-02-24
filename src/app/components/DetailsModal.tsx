@@ -1,5 +1,7 @@
+'use client';
+
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, Play, Plus, ThumbsUp, Check } from 'lucide-react';
 import { Content } from '../data/mockData';
 import { MovieCard } from './MovieCard';

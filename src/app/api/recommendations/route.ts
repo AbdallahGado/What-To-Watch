@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getSmartRecommendations, TMDBMedia } from '@/lib/tmdb';
-import { RecommendationItem, RecommendationExplanation } from '@/features/recommend/types';
+import { getSmartRecommendations } from '@/lib/tmdb';
+import { RecommendationItem, RecommendationExplanation, MoodId } from '@/features/recommend/types';
+import { MOOD_CONFIGS } from '@/lib/recommendation-data';
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
       mood,
       genres,
       runtimeMinutes,
-      withFriends: group !== 'solo', // Fallback for basic logic
+      withFriends: group !== 'solo',
       language
     });
 
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
     const results: RecommendationItem[] = rawResults.slice(0, 5).map((media) => {
         return {
             id: media.id,
-            mediaType: media.media_type || (media.title ? 'movie' : 'tv'), // Infer if missing from discover
+            mediaType: media.media_type || (media.title ? 'movie' : 'tv'),
             title: media.title || media.name || 'Untitled',
             overview: media.overview,
             posterPath: media.poster_path,
@@ -38,28 +39,40 @@ export async function POST(request: Request) {
   }
 }
 
-function generateExplanation(mood: string, group: string, language: string, media: TMDBMedia): RecommendationExplanation {
+function generateExplanation(mood: string, group: string, language: string, media: any): RecommendationExplanation {
     const factors = [];
+    const config = MOOD_CONFIGS[mood as MoodId];
     
-    // Group Dynamics
-    if (group === 'date' && media.vote_average > 7) factors.push('Safe bet for date night');
-    if (group === 'family') factors.push('Family friendly choice');
-    if (group === 'friends') factors.push('Fun to watch with a crowd');
-    if (group === 'solo') factors.push('Great for a solo deep dive');
+    // Genre Match
+    const itemGenres = media.genre_ids || [];
+    if (config?.genres.some(g => itemGenres.includes(g))) {
+        factors.push(`Matches your ${mood} vibe`);
+    }
 
-    // Mood Matching
-    if (mood === 'nostalgic') factors.push('Classic feel');
-    if (mood === 'dark') factors.push('Dark and psychological');
-    if (mood === 'inspiring') factors.push('Thought provoking');
+    // Rating
+    if (media.vote_average > 8) factors.push('Critically acclaimed masterpiece');
+    else if (media.vote_average > 7) factors.push('Highly rated by the community');
+
+    // Era
+    if (config?.era) {
+        const year = parseInt((media.release_date || media.first_air_date)?.split('-')[0]);
+        if (year >= config.era.start && year <= config.era.end) {
+            factors.push(`Classic era pick (${year})`);
+        }
+    }
+
+    // Group Dynamics
+    if (group === 'date') factors.push('Perfectly paced for date night');
+    if (group === 'family') factors.push('Wholesome and family-safe');
+    if (group === 'friends') factors.push('Highly rewatchable with a group');
 
     // Language
-    if (language === 'any' && media.original_language && media.original_language !== 'en') factors.push('Internationally acclaimed');
-
-    // Generic
-    if (media.vote_average > 8) factors.push('Critically acclaimed');
+    if (language === 'any' && media.original_language && media.original_language !== 'en') {
+        factors.push('Top-tier international cinema');
+    }
     
     return {
-        reason: `Matches your "${mood}" vibe perfectly.`,
-        factors: factors.length > 0 ? factors : ['Trending in this genre', 'Matches your time preference']
+        reason: config?.explanation || `A great match for your current vibe.`,
+        factors: factors.length > 0 ? factors : ['Trending pick for you', 'Strong thematic match']
     };
 }

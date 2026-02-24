@@ -4,7 +4,7 @@ import { ScrollReveal } from '@/app/components/ScrollReveal';
 export function WhatToWatchEntrySection() {
   return (
     <ScrollReveal delay={0.15}>
-        <WhatToWatchEntry />
+      <WhatToWatchEntry />
     </ScrollReveal>
   );
 }

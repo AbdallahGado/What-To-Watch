@@ -29,25 +29,28 @@ declare namespace __next_route_internal_types__ {
     S extends `${string}${SearchOrHash}` ? never : S
 
   type StaticRoutes = 
-    | `/`
-    | `/api/debug/env`
     | `/api/debug/envfile`
-    | `/api/media`
-    | `/api/recommendations`
-    | `/api/reviews`
+    | `/api/debug/env`
     | `/api/search`
     | `/api/tmdb/videos`
+    | `/api/media`
     | `/api/webhooks/clerk`
     | `/collection`
+    | `/api/reviews`
     | `/movies`
     | `/profile`
     | `/series`
+    | `/api/recommendations`
+    | `/`
     | `/what-to-watch`
   type DynamicRoutes<T extends string = string> = 
     | `/movie/${SafeSlug<T>}`
     | `/person/${SafeSlug<T>}`
+    | `/sign-in/${OptionalCatchAllSlug<T>}`
     | `/swipe/${SafeSlug<T>}`
+    | `/user-profile/${OptionalCatchAllSlug<T>}`
     | `/tv/${SafeSlug<T>}`
+    | `/sign-up/${OptionalCatchAllSlug<T>}`
 
   type RouteImpl<T> = 
     | StaticRoutes

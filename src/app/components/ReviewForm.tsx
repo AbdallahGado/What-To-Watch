@@ -16,11 +16,12 @@ interface ReviewFormProps {
     reviewText?: string | null;
   } | null;
   onReviewAdded?: () => void;
+  isSignedIn?: boolean;
 }
 
 const MAX_REVIEW_LENGTH = 1000;
 
-const ReviewFormComponent = ({ tmdbId, mediaType, existingReview, onReviewAdded }: ReviewFormProps) => {
+const ReviewFormComponent = ({ tmdbId, mediaType, existingReview, onReviewAdded, isSignedIn = true }: ReviewFormProps) => {
   const [rating, setRating] = useState(existingReview?.rating || 0);
   const [review, setReview] = useState(existingReview?.reviewText || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,6 +31,10 @@ const ReviewFormComponent = ({ tmdbId, mediaType, existingReview, onReviewAdded 
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isSignedIn) {
+      setError('Please sign in to submit a review.');
+      return;
+    }
     if (rating < 1 || rating > 5) {
       setError('Please select a rating');
       return;
@@ -68,7 +73,7 @@ const ReviewFormComponent = ({ tmdbId, mediaType, existingReview, onReviewAdded 
     } finally {
       setIsSubmitting(false);
     }
-  }, [rating, review, tmdbId, mediaType, existingReview, onReviewAdded]);
+  }, [rating, review, tmdbId, mediaType, existingReview, onReviewAdded, isSignedIn, router]);
 
   const handleStarClick = useCallback((star: number) => {
     setRating(star);
@@ -92,6 +97,11 @@ const ReviewFormComponent = ({ tmdbId, mediaType, existingReview, onReviewAdded 
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {!isSignedIn && (
+            <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-white/70 text-sm">
+              Sign in to submit a review.
+            </div>
+          )}
           {/* Rating Stars */}
           <div className="space-y-2">
             <label className="text-white/80 text-sm font-medium">Rating</label>
@@ -106,6 +116,7 @@ const ReviewFormComponent = ({ tmdbId, mediaType, existingReview, onReviewAdded 
                   className="p-1 hover:scale-110 transition-transform"
                   aria-label={`Rate ${star} stars`}
                   aria-pressed={rating === star}
+                  disabled={!isSignedIn}
                 >
                   <Star
                     className={`w-8 h-8 transition-colors ${
@@ -136,6 +147,7 @@ const ReviewFormComponent = ({ tmdbId, mediaType, existingReview, onReviewAdded 
               className="bg-white/5 border-white/10 text-white placeholder:text-white/40 min-h-[100px] resize-none"
               maxLength={MAX_REVIEW_LENGTH}
               aria-describedby="review-count"
+              disabled={!isSignedIn}
             />
             <div id="review-count" className="text-right text-xs text-white/50">
               {review.length}/{MAX_REVIEW_LENGTH}
@@ -152,7 +164,7 @@ const ReviewFormComponent = ({ tmdbId, mediaType, existingReview, onReviewAdded 
           {/* Submit Button */}
           <Button
             type="submit"
-            disabled={rating < 1 || rating > 5 || isSubmitting}
+            disabled={!isSignedIn || rating < 1 || rating > 5 || isSubmitting}
             className="w-full bg-brand-500 hover:bg-brand-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (

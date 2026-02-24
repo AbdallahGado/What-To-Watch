@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Check, ArrowRight, Wind, Heart, Coffee, Moon, Sun, CloudRain, Zap } from 'lucide-react';
+import { X, Sparkles, Check, ArrowRight, Heart, Coffee, Moon, Sun, CloudRain, Zap } from 'lucide-react';
 import { GENRES, CONTENT, Content } from '../data/mockData';
 
 // Custom moods with better icons/feel
@@ -103,7 +103,7 @@ export const WhatToWatchWizard = ({ isOpen, onClose, onComplete }: WizardProps) 
               >
                 <div className="text-center mb-12">
                     <span className="text-brand-300 text-xs font-medium tracking-widest uppercase mb-3 block">Step 1 of 3</span>
-                    <h2 className="text-4xl font-light text-white">What's your vibe tonight?</h2>
+                    <h2 className="text-4xl font-light text-white">What&apos;s your vibe tonight?</h2>
                 </div>
                 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">

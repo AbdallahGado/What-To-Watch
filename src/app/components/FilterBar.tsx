@@ -1,8 +1,7 @@
 
 'use client';
 
-import React, { memo, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { memo, useCallback } from 'react';
 
 interface FilterOption {
   id: string;
@@ -19,7 +18,7 @@ interface FilterBarProps {
 }
 
 const FilterButtonComponent = memo(
-  ({ option, isActive, onClick, label }: { option: FilterOption; isActive: boolean; onClick: () => void; label: string }) => (
+  ({ option, isActive, onClick }: { option: FilterOption; isActive: boolean; onClick: () => void }) => (
     <button
       onClick={onClick}
       className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap border ${
@@ -29,7 +28,7 @@ const FilterButtonComponent = memo(
       }`}
       type="button"
       aria-pressed={isActive}
-      aria-label={`Filter by ${label}`}
+      aria-label={`Filter by ${option.label}`}
     >
       {option.label}
     </button>
@@ -47,7 +46,6 @@ const FilterBarComponent = ({
   onSortChange
 }: FilterBarProps) => {
   const handleAllGenres = useCallback(() => onGenreChange('all'), [onGenreChange]);
-  const handleSortChange = useCallback((id: string) => () => onSortChange(id), [onSortChange]);
 
   return (
     <div className="flex flex-col gap-6 mb-10">
@@ -74,7 +72,6 @@ const FilterBarComponent = ({
               option={genre}
               isActive={activeGenre === genre.id}
               onClick={() => onGenreChange(genre.id)}
-              label="genre"
             />
           ))}
         </div>

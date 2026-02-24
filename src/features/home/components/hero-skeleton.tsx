@@ -1,5 +1,3 @@
-import React from 'react';
-
 export function HeroSkeleton() {
   return (
     <div className="relative h-screen w-full bg-slate-950 animate-pulse overflow-hidden">

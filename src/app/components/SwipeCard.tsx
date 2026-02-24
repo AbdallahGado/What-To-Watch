@@ -1,15 +1,17 @@
 'use client'
 
-import React, { memo, useCallback, useMemo } from 'react'
-import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion'
+import { memo, useCallback, useMemo } from 'react'
+import { motion, useMotionValue, useTransform, type PanInfo } from 'framer-motion'
 import { Heart, X } from 'lucide-react'
 import Image from 'next/image'
+import { getPosterUrl } from '@/lib/tmdb-images'
+import type { TMDBMediaType } from '@/lib/tmdb-types'
 
 interface SwipeCardProps {
   id: string
   title: string
   poster: string | null
-  mediaType: string
+  mediaType: TMDBMediaType
   onSwipe: (direction: 'left' | 'right') => void
   isFront: boolean
 }
@@ -21,7 +23,7 @@ const SwipeCardComponent = ({ title, poster, mediaType, onSwipe, isFront }: Swip
   const heartOpacity = useTransform(x, [50, 150], [0, 1])
   const xOpacity = useTransform(x, [-50, -150], [0, 1])
 
-  const handleDragEnd = useCallback((_: any, info: any) => {
+  const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (info.offset.x > 100) {
       onSwipe('right')
     } else if (info.offset.x < -100) {
@@ -30,7 +32,7 @@ const SwipeCardComponent = ({ title, poster, mediaType, onSwipe, isFront }: Swip
   }, [onSwipe])
 
   const imageUrl = useMemo(
-    () => poster ? `https://image.tmdb.org/t/p/w500${poster}` : null,
+    () => getPosterUrl(poster, 'w500') ?? null,
     [poster]
   )
 
