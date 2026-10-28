@@ -1,4 +1,4 @@
-export function SectionSkeleton({ title }: { title: string }) {
+export function SectionSkeleton({ title: _title }: { title: string }) {
   return (
     <div className="py-12 max-w-7xl mx-auto px-6 animate-pulse">
       <div className="h-8 w-48 bg-white/5 rounded-full mb-8" />

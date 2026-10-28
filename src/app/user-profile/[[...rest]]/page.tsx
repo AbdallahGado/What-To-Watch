@@ -11,7 +11,7 @@ export default function UserProfilePage() {
     return (
       <div className="min-h-screen bg-background text-white pb-20">
         <Navbar activeView="profile" />
-        <main className="pt-32 max-w-3xl mx-auto px-6">
+        <main id="main-content" tabIndex={-1} className="pt-32 max-w-3xl mx-auto px-6">
           <div className="glass-panel p-8 rounded-3xl border border-white/10 space-y-4">
             <h1 className="text-2xl font-display font-semibold">Connect Clerk</h1>
             <p className="text-white/60 text-sm leading-relaxed">
@@ -34,7 +34,7 @@ export default function UserProfilePage() {
   return (
     <div className="min-h-screen bg-background text-white pb-20">
       <Navbar activeView="profile" />
-      <main className="pt-32 max-w-5xl mx-auto px-6">
+      <main id="main-content" tabIndex={-1} className="pt-32 max-w-5xl mx-auto px-6">
         <SignedIn>
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:p-6">
             <UserProfile path="/user-profile" routing="path" appearance={clerkAppearance} />

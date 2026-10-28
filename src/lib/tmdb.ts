@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import type {
   TMDBMedia,
   TMDBMediaDetails,
@@ -9,6 +7,8 @@ import type {
   TMDBVideo
 } from './tmdb-types';
 import { TRENDING, TOP_RATED, ACTORS, CONTENT } from '@/app/data/mockData';
+import { MOOD_CONFIGS, type MoodConfig } from './recommendation-data';
+import type { MoodId } from '@/features/recommend/types';
 
 export type {
   TMDBMedia,
@@ -24,40 +24,15 @@ export type {
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const DEFAULT_REVALIDATE_SECONDS = 3600; // Increased to 1 hour for better performance
 
-let cachedApiKey = process.env.TMDB_API_KEY ?? null;
-let didReadEnvFile = false;
 let didWarnMissing = false;
 
-function readApiKeyFromEnvFile(): string | null {
-  try {
-    const envPath = path.resolve(process.cwd(), '.env.local');
-    if (!fs.existsSync(envPath)) return null;
-    const raw = fs.readFileSync(envPath, 'utf8');
-    const match = raw.match(/TMDB_API_KEY\s*=\s*\"?([^\"\n\r]+)\"?/);
-    return match && match[1] ? match[1].trim() : null;
-  } catch {
-    return null;
-  }
-}
-
 export function getTmdbApiKey() {
-  if (cachedApiKey) return cachedApiKey;
-  if (!didReadEnvFile) {
-    didReadEnvFile = true;
-    const fromFile = readApiKeyFromEnvFile();
-    if (fromFile) {
-      cachedApiKey = fromFile;
-      process.env.TMDB_API_KEY = fromFile;
-      return cachedApiKey;
-    }
-  }
-
-  if (!didWarnMissing) {
+  const key = process.env.TMDB_API_KEY?.trim() || null;
+  if (!key && !didWarnMissing) {
     console.warn('TMDB_API_KEY is not set. TMDB requests will fail. Set it in .env.local.');
     didWarnMissing = true;
   }
-
-  return null;
+  return key;
 }
 
 export function hasTmdbApiKey() {
@@ -150,7 +125,7 @@ async function tmdbFetch<T>(
     });
 
     return fetchPromise;
-  } catch (err: any) {
+  } catch (err) {
     clearTimeout(timeoutId);
     if (options.fallback !== undefined) return options.fallback;
     throw err;
@@ -327,6 +302,7 @@ export interface RecommendationInput {
   runtimeMinutes?: number;
   withFriends: boolean;
   language?: string;
+  adventure?: string;
 }
 
 // ... existing code ...
@@ -374,8 +350,41 @@ export async function getNowPlayingMovies(): Promise<TMDBMedia[]> {
 }
 
 export async function getTopRatedTv(): Promise<TMDBMedia[]> {
+  if (USE_MOCK) {
+    return CONTENT.filter((item) => item.type === 'series').map((item) => ({
+      id: Number(item.id),
+      media_type: 'tv',
+      name: item.title,
+      overview: item.description,
+      poster_path: item.poster ?? null,
+      backdrop_path: item.backdrop ?? null,
+      vote_average: item.rating,
+    }));
+  }
+
   const data = await tmdbFetch<TmdbListResponse<TMDBMedia>>(
     '/tv/top_rated',
+    undefined,
+    { fallback: { results: [] } }
+  );
+  return assignMediaType(data.results, 'tv');
+}
+
+export async function getPopularTv(): Promise<TMDBMedia[]> {
+  if (USE_MOCK) {
+    return CONTENT.filter((item) => item.type === 'series').map((item) => ({
+      id: Number(item.id),
+      media_type: 'tv',
+      name: item.title,
+      overview: item.description,
+      poster_path: item.poster ?? null,
+      backdrop_path: item.backdrop ?? null,
+      vote_average: item.rating,
+    }));
+  }
+
+  const data = await tmdbFetch<TmdbListResponse<TMDBMedia>>(
+    '/tv/popular',
     undefined,
     { fallback: { results: [] } }
   );
@@ -458,40 +467,96 @@ export async function getTvVideos(id: number): Promise<TMDBVideo[]> {
   }
 }
 
-import { MOOD_CONFIGS, MoodConfig } from './recommendation-data';
-import { MoodId } from '@/features/recommend/types';
+// Pure scoring helper for the smart recommendations engine. No network
+// calls: given the same inputs it always returns the same score.
+export function calculateMatchScore(
+  item: TMDBMedia,
+  config: MoodConfig,
+  targetGenres: number[],
+  userGenres: number[],
+  withFriends: boolean,
+): number {
+  let score = 0;
 
-// ... existing code ...
+  // 1. Genre overlap (30 pts)
+  const itemGenres = item.genre_ids || [];
+  const requestedTargetGenres = targetGenres.length > 0 ? targetGenres : config.genres;
+  const matchedGenres = requestedTargetGenres.filter((g) => itemGenres.includes(g));
+  if (requestedTargetGenres.length > 0) {
+    score += (matchedGenres.length / requestedTargetGenres.length) * 30;
+  }
+
+  // 2. Rating & popularity (20 pts)
+  score += (item.vote_average || 0) * 1.5; // (Avg 7-8 -> 10.5-12 pts)
+  score += Math.min((item.vote_count || 0) / 2000, 5); // (Max 5 pts)
+
+  // 3. User-specific genres (10 pts)
+  if (userGenres.some((g) => itemGenres.includes(g))) {
+    score += 10;
+  }
+
+  // 4. Era bonus (5 pts) — rewards nostalgia, matching the era filter
+  const era = config.era;
+  if (era) {
+    const date = item.release_date ?? item.first_air_date;
+    if (date) {
+      const year = Number.parseInt(date.slice(0, 4), 10);
+      if (Number.isSafeInteger(year) && year >= era.start && year <= era.end) {
+        score += 5;
+      }
+    }
+  }
+
+  // 5. Group fit (5 pts)
+  if (withFriends && (item.vote_average || 0) > 7.5) {
+    score += 5;
+  }
+
+  return score;
+}
 
 export async function getSmartRecommendations(input: RecommendationInput): Promise<TMDBMedia[]> {
-  const { type, mood, genres: userGenres, runtimeMinutes, withFriends, language } = input;
+  const { type, mood, genres: userGenresInput, runtimeMinutes, withFriends, language, adventure } = input;
   const config = MOOD_CONFIGS[mood as MoodId] || MOOD_CONFIGS.chill;
 
+  const userGenres = (userGenresInput ?? []).filter(
+    (g): g is number => typeof g === 'number' && Number.isSafeInteger(g) && g > 0,
+  );
   const targetGenres = Array.from(new Set([...config.genres, ...userGenres]));
   const voteAverageGte = Math.max(config.voteAverageGte, withFriends ? 7.2 : 6.0);
   const voteCountGte = withFriends ? 500 : 100;
 
+  const sortBy = adventure === 'safe' ? 'popularity.desc' : adventure === 'wild' ? 'vote_count.asc' : 'vote_average.desc';
+
   const commonParams: Record<string, string | number> = {
-    with_genres: targetGenres.join(','),
     'vote_average.gte': voteAverageGte,
     'vote_count.gte': voteCountGte,
-    sort_by: 'popularity.desc',
+    sort_by: sortBy,
   };
+
+  if (targetGenres.length > 0) {
+    commonParams.with_genres = targetGenres.join(',');
+  }
 
   if (language === 'english') {
     commonParams.with_original_language = 'en';
   }
 
-  if (config.era) {
-    commonParams['primary_release_date.gte'] = `${config.era.start}-01-01`;
-    commonParams['primary_release_date.lte'] = `${config.era.end}-12-31`;
-  }
-
   // Fetch a larger pool of items to score (e.g., top 40)
   const fetchPool = async (mediaType: 'movie' | 'tv') => {
     const params = { ...commonParams };
-    if (mediaType === 'movie' && runtimeMinutes) {
+    if (mediaType === 'movie' && typeof runtimeMinutes === 'number' && Number.isSafeInteger(runtimeMinutes)) {
       params['with_runtime.lte'] = runtimeMinutes;
+    }
+
+    if (config.era) {
+      if (mediaType === 'movie') {
+        params['primary_release_date.gte'] = `${config.era.start}-01-01`;
+        params['primary_release_date.lte'] = `${config.era.end}-12-31`;
+      } else {
+        params['first_air_date.gte'] = `${config.era.start}-01-01`;
+        params['first_air_date.lte'] = `${config.era.end}-12-31`;
+      }
     }
 
     const data = await tmdbFetch<TmdbListResponse<TMDBMedia>>(
@@ -512,31 +577,41 @@ export async function getSmartRecommendations(input: RecommendationInput): Promi
     pool = [...movies, ...tv];
   }
 
+  // Fallback: if strict filters returned nothing, broaden the search
+  if (pool.length === 0) {
+    const relaxedParams: Record<string, string | number> = { sort_by: 'popularity.desc' };
+    const relaxedFetch = async (mediaType: 'movie' | 'tv') => {
+      const data = await tmdbFetch<TmdbListResponse<TMDBMedia>>(
+        `/discover/${mediaType}`,
+        relaxedParams,
+        { fallback: { results: [] } }
+      );
+      return assignMediaType(data.results, mediaType);
+    };
+    if (type === 'movie') {
+      pool = await relaxedFetch('movie');
+    } else if (type === 'tv') {
+      pool = await relaxedFetch('tv');
+    } else {
+      const [movies, tv] = await Promise.all([relaxedFetch('movie'), relaxedFetch('tv')]);
+      pool = [...movies, ...tv];
+    }
+  }
+
   // Score the results
-  const scoredResults = pool.map((item) => {
-    let score = 0;
+  const scoredResults = pool.map((item) => ({
+    ...item,
+    matchScore: calculateMatchScore(item, config, targetGenres, userGenres, withFriends),
+  }));
 
-    // 1. Genre Overlap (30 pts)
-    const itemGenres = item.genre_ids || [];
-    const matchedGenres = targetGenres.filter(g => itemGenres.includes(g));
-    score += (matchedGenres.length / targetGenres.length) * 30;
-
-    // 2. Rating & Popularity (20 pts)
-    score += (item.vote_average || 0) * 1.5; // (Avg 7-8 -> 10.5-12 pts)
-    score += Math.min((item.vote_count || 0) / 2000, 5); // (Max 5 pts)
-
-    // 3. User specifics (10 pts)
-    if (userGenres.some(g => itemGenres.includes(g))) score += 10;
-
-    // 4. Group Fit (5 pts)
-    if (withFriends && (item.vote_average || 0) > 7.5) score += 5;
-
-    return { ...item, matchScore: score };
-  });
-
-  // Sort and take top 12
+  // Sort: best match first, then richer titles, then higher rated
   return scoredResults
-    .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0))
+    .sort(
+      (a, b) =>
+        (b.matchScore || 0) - (a.matchScore || 0) ||
+        (b.vote_count || 0) - (a.vote_count || 0) ||
+        (b.vote_average || 0) - (a.vote_average || 0) ||
+        (a.id || 0) - (b.id || 0),
+    )
     .slice(0, 12);
 }
-

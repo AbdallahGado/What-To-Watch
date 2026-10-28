@@ -1,10 +1,8 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import Link from 'next/link';
-import { MovieCard } from './MovieCard';
+import { MediaCardLink } from './MediaCardLink';
 import type { TMDBMedia } from '@/lib/tmdb-types';
-import { getMediaHref, toCardData } from '@/lib/media';
 
 interface MediaGridProps {
   items: TMDBMedia[];
@@ -27,9 +25,6 @@ const SkeletonLoader = ({ count = 10 }: { count?: number }) => (
 );
 
 function MediaCardItem({ item, index }: { item: TMDBMedia; index: number }) {
-  const href = getMediaHref(item);
-  const cardData = toCardData(item);
-
   return (
     <motion.div
       layout
@@ -40,9 +35,7 @@ function MediaCardItem({ item, index }: { item: TMDBMedia; index: number }) {
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.4, delay: index * 0.05, ease: 'easeOut' }}
     >
-      <Link href={href} className="block" aria-label={`View details for ${cardData.title}`}>
-        <MovieCard tmdb={cardData} variant="portrait" />
-      </Link>
+      <MediaCardLink item={item} />
     </motion.div>
   );
 }
@@ -50,6 +43,7 @@ function MediaCardItem({ item, index }: { item: TMDBMedia; index: number }) {
 export function MediaGrid({ items, isLoading }: MediaGridProps) {
   return (
     <div
+      id="media-grid"
       className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-y-10 gap-x-6"
       role="region"
       aria-label="Media grid"

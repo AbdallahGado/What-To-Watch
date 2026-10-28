@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import { Navbar } from '@/app/components/Navbar';
-import type { TMDBMedia, TMDBPersonDetails } from '@/lib/tmdb-types';
+import type { TMDBPersonDetails } from '@/lib/tmdb-types';
 import { getMediaTitle } from '@/lib/media';
 import { getProfileUrl } from '@/lib/tmdb-images';
 
@@ -11,12 +11,12 @@ interface PersonDetailsProps {
 export function PersonDetails({ data }: PersonDetailsProps) {
   const profileUrl = getProfileUrl(data.profile_path, 'w300');
 
-  const credits = (data.combined_credits?.cast ?? []) as TMDBMedia[];
+  const credits = data.combined_credits?.cast ?? [];
 
   return (
     <div className="min-h-screen bg-background text-white pb-16">
       <Navbar />
-      <main className="pt-24 max-w-5xl mx-auto px-6">
+      <main id="main-content" tabIndex={-1} className="pt-24 max-w-5xl mx-auto px-6">
         <div className="flex flex-col md:flex-row gap-6">
           <div className="w-40 shrink-0">
             {profileUrl && (
@@ -67,4 +67,3 @@ export function PersonDetails({ data }: PersonDetailsProps) {
     </div>
   );
 }
-

@@ -16,7 +16,11 @@ export async function GET(request: Request) {
 
     const results = await searchMulti(query.trim());
     return NextResponse.json(results, { headers: JSON_CACHE_HEADERS });
-  } catch {
-    return NextResponse.json([], { status: 200, headers: JSON_CACHE_HEADERS });
+  } catch (error) {
+    console.error('TMDB multi-search failed', error);
+    return NextResponse.json(
+      { error: 'Search is temporarily unavailable.' },
+      { status: 502, headers: { 'Cache-Control': 'no-store' } }
+    );
   }
 }

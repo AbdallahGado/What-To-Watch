@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, Search, Clapperboard, Monitor, Star } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -75,16 +75,23 @@ const SearchOverlayComponent = ({ isOpen, onClose }: SearchOverlayProps) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<TMDBMedia[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const debouncedQuery = useDebounce(query, 500);
   useLockBodyScroll(isOpen);
 
   // Handle overlay visibility
   useEffect(() => {
     if (!isOpen) {
+      previouslyFocusedRef.current?.focus();
       return;
     }
 
+    previouslyFocusedRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const timer = setTimeout(() => inputRef.current?.focus(), 100);
 
     return () => {
@@ -97,6 +104,7 @@ const SearchOverlayComponent = ({ isOpen, onClose }: SearchOverlayProps) => {
     setQuery('');
     setResults([]);
     setIsLoading(false);
+    setError(null);
   }, [isOpen]);
 
   // Handle search
@@ -107,10 +115,12 @@ const SearchOverlayComponent = ({ isOpen, onClose }: SearchOverlayProps) => {
       if (!debouncedQuery.trim()) {
         setResults([]);
         setIsLoading(false);
+        setError(null);
         return;
       }
 
       setIsLoading(true);
+      setError(null);
       try {
         const response = await fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`, {
           signal: controller.signal
@@ -131,6 +141,7 @@ const SearchOverlayComponent = ({ isOpen, onClose }: SearchOverlayProps) => {
         if (controller.signal.aborted) return;
         console.error('Search failed:', error);
         setResults([]);
+        setError('Search is unavailable right now. Please try again.');
       } finally {
         if (!controller.signal.aborted) setIsLoading(false);
       }
@@ -139,25 +150,53 @@ const SearchOverlayComponent = ({ isOpen, onClose }: SearchOverlayProps) => {
     performSearch();
 
     return () => controller.abort();
-  }, [debouncedQuery]);
+  }, [debouncedQuery, retryCount]);
 
   const handleClose = useCallback(onClose, [onClose]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape') {
       handleClose();
+      return;
+    }
+
+    if (e.key !== 'Tab') return;
+
+    const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusable?.length) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
     }
   }, [handleClose]);
 
+  if (!isOpen) return null;
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center" onKeyDown={handleKeyDown} role="dialog" aria-modal="true" aria-labelledby="search-title">
+    <motion.div
+          ref={dialogRef}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[100] flex flex-col items-center"
+          onKeyDown={handleKeyDown}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="search-title"
+          tabIndex={-1}
+        >
           {/* Backdrop */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             onClick={handleClose}
             className="absolute inset-0 bg-background/90 backdrop-blur-xl"
             aria-hidden="true"
@@ -167,13 +206,13 @@ const SearchOverlayComponent = ({ isOpen, onClose }: SearchOverlayProps) => {
           <motion.div 
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -20, opacity: 0 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className="relative z-10 w-full max-w-4xl px-6 pt-12 md:pt-24 flex flex-col h-full"
           >
             {/* Search Header */}
             <div className="flex items-center gap-6 mb-12">
               <Search className="w-8 h-8 text-white/50 flex-shrink-0" aria-hidden="true" />
+              <h2 id="search-title" className="sr-only">Search movies and TV shows</h2>
               <input
                 ref={inputRef}
                 type="text"
@@ -182,7 +221,6 @@ const SearchOverlayComponent = ({ isOpen, onClose }: SearchOverlayProps) => {
                 placeholder="Search movies, TV shows..."
                 className="flex-1 bg-transparent border-none outline-none text-3xl md:text-5xl font-display font-light placeholder-white/20 text-white"
                 aria-label="Search for movies and TV shows"
-                id="search-title"
               />
               <button
                 onClick={handleClose}
@@ -206,6 +244,17 @@ const SearchOverlayComponent = ({ isOpen, onClose }: SearchOverlayProps) => {
                     <SearchResultItem key={item.id} item={item} index={index} onClose={handleClose} />
                   ))}
                 </div>
+              ) : error ? (
+                <div className="text-center py-20" role="alert">
+                  <p className="text-white/60 text-lg">{error}</p>
+                  <button
+                    type="button"
+                    onClick={() => setRetryCount((count) => count + 1)}
+                    className="mt-4 rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+                  >
+                    Try again
+                  </button>
+                </div>
               ) : query.trim() ? (
                 <div className="text-center py-20">
                   <div className="text-white/30 text-xl font-light">
@@ -219,13 +268,10 @@ const SearchOverlayComponent = ({ isOpen, onClose }: SearchOverlayProps) => {
               )}
             </div>
           </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+    </motion.div>
   );
 };
 
 SearchOverlayComponent.displayName = 'SearchOverlay';
 
 export const SearchOverlay = memo(SearchOverlayComponent);
-

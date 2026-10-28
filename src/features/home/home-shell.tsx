@@ -5,11 +5,10 @@ import { Navbar } from '@/app/components/Navbar';
 import { Section } from '@/app/components/Section';
 import { ScrollReveal } from '@/app/components/ScrollReveal';
 import { ActorCard } from '@/app/components/ActorCard';
-import { MovieCard } from '@/app/components/MovieCard';
+import { MediaCardLink } from '@/app/components/MediaCardLink';
 import { WhatToWatchEntry } from '@/features/recommend/what-to-watch-entry';
 import Link from 'next/link';
 import { HeroCarousel } from '@/features/home/components/hero-carousel';
-import { getMediaHref, toCardData } from '@/lib/media';
 
 interface HomeShellProps {
   trending: TMDBMedia[];
@@ -32,11 +31,7 @@ export function HomeShell({ trending, topRated, people, upcoming, nowPlaying }: 
     { title: 'Top Rated Classics', items: topRated, delay: 0.25 }
   ];
 
-  const renderMediaCard = (item: TMDBMedia) => (
-    <Link href={getMediaHref(item)}>
-      <MovieCard tmdb={toCardData(item)} variant="portrait" />
-    </Link>
-  );
+  const renderMediaCard = (item: TMDBMedia) => <MediaCardLink item={item} />;
 
   const renderSections = (sections: Array<{ title: string; items: TMDBMedia[]; delay: number }>) =>
     sections.map((section) =>
@@ -50,7 +45,7 @@ export function HomeShell({ trending, topRated, people, upcoming, nowPlaying }: 
   return (
     <div className="min-h-screen bg-background text-white pb-20 overflow-x-hidden">
       <Navbar />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         {heroItems.length > 0 && <HeroCarousel items={heroItems} />}
 
         <div className="relative z-10 -mt-20 bg-gradient-to-t from-background via-background to-transparent pt-20 space-y-4">
@@ -80,4 +75,3 @@ export function HomeShell({ trending, topRated, people, upcoming, nowPlaying }: 
     </div>
   );
 }
-

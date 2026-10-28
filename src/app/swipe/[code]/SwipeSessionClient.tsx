@@ -73,7 +73,7 @@ export function SwipeSessionClient({ code, members, initialMovies }: SwipeSessio
 
   return (
     <>
-      <main className="max-w-xl mx-auto px-6 pt-32">
+      <main id="main-content" tabIndex={-1} className="max-w-xl mx-auto px-6 pt-32">
         {/* Lobby State */}
         <div className="space-y-8">
           <div className="text-center space-y-4">

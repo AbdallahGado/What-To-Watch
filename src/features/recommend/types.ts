@@ -13,6 +13,7 @@ export type TimeId = 'short' | 'movie' | 'long' | 'binge' | '';
 export type GroupId = 'solo' | 'date' | 'friends' | 'family' | '';
 export type LanguageId = 'any' | 'english' | '';
 export type MediaTypeId = 'movie' | 'tv' | 'any' | '';
+export type AdventureId = 'safe' | 'balanced' | 'wild' | '';
 
 export interface RecommendationFormState {
   type: MediaTypeId;
@@ -21,6 +22,7 @@ export interface RecommendationFormState {
   time: TimeId;
   group: GroupId;
   language: LanguageId;
+  adventure: AdventureId;
 }
 
 export interface RecommendationExplanation {

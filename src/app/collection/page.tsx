@@ -6,7 +6,8 @@ import { MediaGrid } from '@/app/components/MediaGrid';
 import type { TMDBMedia } from '@/lib/tmdb-types';
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Film, Search } from 'lucide-react';
+import { Compass, Film, Search, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 
 export default function CollectionPage() {
   const { items } = useWatchlistStore();
@@ -63,7 +64,7 @@ export default function CollectionPage() {
         <div className="absolute bottom-0 left-1/2 h-96 w-[28rem] -translate-x-1/2 rounded-full bg-white/5 blur-[140px]" />
       </div>
       <Navbar activeView="list" />
-      <div className="relative z-10 pt-28 px-6 max-w-7xl mx-auto min-h-[60vh]">
+      <main id="main-content" tabIndex={-1} className="relative z-10 pt-28 px-6 max-w-7xl mx-auto min-h-[60vh]">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-10">
           <div className="space-y-4">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white/50">
@@ -154,6 +155,22 @@ export default function CollectionPage() {
                   <p className="text-white/50 mb-8 max-w-sm text-center">
                     Tap the &ldquo;Add to List&rdquo; button on any movie or show to save it here.
                   </p>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <Link
+                      href="/movies"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-background transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+                    >
+                      <Compass className="h-4 w-4" aria-hidden="true" />
+                      Browse movies
+                    </Link>
+                    <Link
+                      href="/what-to-watch"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+                    >
+                      <Sparkles className="h-4 w-4" aria-hidden="true" />
+                      Find a match
+                    </Link>
+                  </div>
               </motion.div>
             )
         ) : (
@@ -163,8 +180,7 @@ export default function CollectionPage() {
                  ))}
             </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
-

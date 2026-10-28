@@ -1,9 +1,7 @@
-import Link from 'next/link';
 import type { TMDBMedia } from '@/lib/tmdb-types';
 import { Section } from '@/app/components/Section';
-import { MovieCard } from '@/app/components/MovieCard';
+import { MediaCardLink } from '@/app/components/MediaCardLink';
 import { ScrollReveal } from '@/app/components/ScrollReveal';
-import { getMediaHref, toCardData } from '@/lib/media';
 
 interface MediaSectionProps {
   title: string;
@@ -19,9 +17,7 @@ export async function MediaSection({ title, fetchData }: MediaSectionProps) {
     <ScrollReveal>
       <Section title={title}>
         {items.map((item) => (
-          <Link key={item.id} href={getMediaHref(item)} className="scroll-snap-align-start shrink-0">
-            <MovieCard tmdb={toCardData(item)} variant="portrait" />
-          </Link>
+          <MediaCardLink key={item.id} item={item} />
         ))}
       </Section>
     </ScrollReveal>

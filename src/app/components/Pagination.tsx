@@ -10,7 +10,7 @@ interface PaginationProps {
   totalPages?: number;
 }
 
-const PaginationComponent = ({ currentPage, onPageChange, totalPages = 50 }: PaginationProps) => {
+const PaginationComponent = ({ currentPage, onPageChange, totalPages = 500 }: PaginationProps) => {
   const getPageNumbers = useCallback(() => {
     const pages = [];
     // Show limited range around current page for simplicity
@@ -25,21 +25,28 @@ const PaginationComponent = ({ currentPage, onPageChange, totalPages = 50 }: Pag
 
   const pageNumbers = useMemo(() => getPageNumbers(), [getPageNumbers]);
 
-  const handlePrevPage = useCallback(() => {
-    if (currentPage > 1) {
-      onPageChange(currentPage - 1);
+  const handlePageClick = useCallback((page: number) => {
+    if (page === currentPage) return;
+
+    onPageChange(page);
+    const mediaGrid = document.getElementById('media-grid');
+    if (mediaGrid) {
+      const top = mediaGrid.getBoundingClientRect().top + window.scrollY - 96;
+      window.scrollTo({ top, left: 0, behavior: 'instant' });
     }
   }, [currentPage, onPageChange]);
 
+  const handlePrevPage = useCallback(() => {
+    if (currentPage > 1) {
+      handlePageClick(currentPage - 1);
+    }
+  }, [currentPage, handlePageClick]);
+
   const handleNextPage = useCallback(() => {
     if (currentPage < totalPages) {
-      onPageChange(currentPage + 1);
+      handlePageClick(currentPage + 1);
     }
-  }, [currentPage, onPageChange, totalPages]);
-
-  const handlePageClick = useCallback((page: number) => {
-    onPageChange(page);
-  }, [onPageChange]);
+  }, [currentPage, handlePageClick, totalPages]);
 
   return (
     <div className="flex items-center justify-center gap-2 mt-12 mb-8" role="navigation" aria-label="Pagination">
@@ -57,10 +64,10 @@ const PaginationComponent = ({ currentPage, onPageChange, totalPages = 50 }: Pag
         <button
           key={page}
           onClick={() => handlePageClick(page)}
-          className={`w-10 h-10 rounded-full text-sm font-medium transition-all ${
+          className={`w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-brand-400 border ${
             currentPage === page 
-              ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25 scale-110' 
-              : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+              ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25 scale-110 border-transparent' 
+              : 'glass-button text-white/60 hover:text-white border-white/10'
           }`}
           aria-pressed={currentPage === page}
           aria-label={`Go to page ${page}`}

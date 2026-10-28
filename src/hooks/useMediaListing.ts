@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { TMDBMedia } from '@/lib/tmdb-types';
+import { parseMediaResults } from '@/lib/media-query';
 
 type MediaType = 'movie' | 'tv';
 
@@ -15,6 +16,7 @@ export function useMediaListing({ type, initialSort = 'popularity.desc' }: UseMe
   const [items, setItems] = useState<TMDBMedia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -33,9 +35,17 @@ export function useMediaListing({ type, initialSort = 'popularity.desc' }: UseMe
           { signal: controller.signal }
         );
         if (!response.ok) {
-          throw new Error(`Failed to load ${type}`);
+          const body: unknown = await response.json().catch(() => null);
+          const message =
+            typeof body === 'object' &&
+            body !== null &&
+            'error' in body &&
+            typeof body.error === 'string'
+              ? body.error
+              : `Failed to load ${type}. Please try again.`;
+          throw new Error(message);
         }
-        const data = (await response.json()) as TMDBMedia[];
+        const data = parseMediaResults(await response.json());
         if (controller.signal.aborted) return;
         setItems(data);
         setIsLoading(false);
@@ -43,6 +53,7 @@ export function useMediaListing({ type, initialSort = 'popularity.desc' }: UseMe
         if (controller.signal.aborted) return;
         const message = error instanceof Error ? error.message : `Failed to load ${type}`;
         setError(message);
+        setItems([]);
         setIsLoading(false);
       }
     };
@@ -52,7 +63,7 @@ export function useMediaListing({ type, initialSort = 'popularity.desc' }: UseMe
     return () => {
       controller.abort();
     };
-  }, [activeGenre, activeSort, currentPage, type]);
+  }, [activeGenre, activeSort, currentPage, retryCount, type]);
 
   return {
     activeGenre,
@@ -61,6 +72,7 @@ export function useMediaListing({ type, initialSort = 'popularity.desc' }: UseMe
     items,
     isLoading,
     error,
+    retry: () => setRetryCount((count) => count + 1),
     setActiveGenre,
     setActiveSort,
     setCurrentPage

@@ -1,91 +1,167 @@
-'use server'
+'use server';
 
-import { auth } from '@/lib/auth'
-import db from '@/lib/db'
-import { revalidatePath } from 'next/cache'
+import { auth } from '@/lib/auth';
+import db from '@/lib/db';
+import { revalidatePath } from 'next/cache';
+import { ensureDbUser } from '@/lib/ensure-user';
+
+type WatchlistPayload = {
+  tmdbId: number;
+  title: string;
+  mediaType: string;
+  poster: string | null;
+};
 
 export async function addXp(amount: number, _reason: string) {
-  const { userId } = await auth()
-  if (!userId) throw new Error('Unauthorized')
+  const { userId } = await auth();
+  if (!userId) throw new Error('Unauthorized');
+
+  await ensureDbUser(userId);
 
   const user = await db.user.update({
     where: { id: userId },
     data: {
-      xp: { increment: amount }
-    }
-  })
+      xp: { increment: amount },
+    },
+  });
 
-  // Basic leveling logic: every 1000 XP is a level
-  const newLevel = Math.floor(user.xp / 1000) + 1
+  const newLevel = Math.floor(user.xp / 1000) + 1;
   if (newLevel > user.level) {
     await db.user.update({
       where: { id: userId },
-      data: { level: newLevel }
-    })
+      data: { level: newLevel },
+    });
   }
 
-  revalidatePath('/profile')
-  return { xp: user.xp, level: newLevel }
+  revalidatePath('/profile');
+  return { xp: user.xp, level: newLevel };
 }
 
-export async function addToWatchlist(item: { tmdbId: number, title: string, mediaType: string, poster: string | null }) {
-  const { userId } = await auth()
-  if (!userId) throw new Error('Unauthorized')
+export async function fetchServerWatchlist() {
+  const { userId } = await auth();
+  if (!userId) return [];
+
+  const rows = await db.watchlistItem.findMany({
+    where: { userId },
+    orderBy: { addedAt: 'desc' },
+  });
+
+  return rows.map((row) => ({
+    id: row.tmdbId,
+    mediaType: (row.mediaType === 'tv' ? 'tv' : 'movie') as 'movie' | 'tv',
+    title: row.title,
+    posterPath: row.poster,
+  }));
+}
+
+export async function addToWatchlist(item: WatchlistPayload) {
+  const { userId } = await auth();
+  if (!userId) throw new Error('Unauthorized');
+
+  await ensureDbUser(userId);
 
   try {
-    await db.watchlistItem.create({
-      data: {
+    await db.watchlistItem.upsert({
+      where: {
+        userId_tmdbId: {
+          userId,
+          tmdbId: item.tmdbId,
+        },
+      },
+      update: {
+        title: item.title,
+        mediaType: item.mediaType,
+        poster: item.poster,
+      },
+      create: {
         userId,
-        ...item
-      }
-    })
+        ...item,
+      },
+    });
 
-    // Reward XP for adding to watchlist
-    await addXp(50, 'Added to watchlist')
+    await addXp(50, 'Added to watchlist');
   } catch (error) {
-    // Item might already exist
-    console.error('Watchlist add error', error)
+    console.error('Watchlist add error', error);
   }
 
-  revalidatePath('/collection')
+  revalidatePath('/collection');
+  revalidatePath('/profile');
+}
+
+export async function removeFromWatchlist(tmdbId: number, mediaType: string) {
+  const { userId } = await auth();
+  if (!userId) throw new Error('Unauthorized');
+
+  await db.watchlistItem.deleteMany({
+    where: { userId, tmdbId, mediaType },
+  });
+
+  revalidatePath('/collection');
+  revalidatePath('/profile');
+}
+
+export async function syncWatchlistItems(items: WatchlistPayload[]) {
+  const { userId } = await auth();
+  if (!userId) throw new Error('Unauthorized');
+
+  await ensureDbUser(userId);
+
+  for (const item of items) {
+    await db.watchlistItem.upsert({
+      where: {
+        userId_tmdbId: {
+          userId,
+          tmdbId: item.tmdbId,
+        },
+      },
+      update: {
+        title: item.title,
+        mediaType: item.mediaType,
+        poster: item.poster,
+      },
+      create: {
+        userId,
+        ...item,
+      },
+    });
+  }
+
+  revalidatePath('/collection');
+  revalidatePath('/profile');
 }
 
 export async function updateCinephileDNA(genres: string[]) {
-  const { userId } = await auth()
-  if (!userId) throw new Error('Unauthorized')
+  const { userId } = await auth();
+  if (!userId) throw new Error('Unauthorized');
 
-  // Map of genre strings to schema fields
   const genreMap: Record<string, string> = {
-    'Action': 'action',
-    'Comedy': 'comedy',
-    'Drama': 'drama',
-    'Horror': 'horror',
+    Action: 'action',
+    Comedy: 'comedy',
+    Drama: 'drama',
+    Horror: 'horror',
     'Science Fiction': 'sciFi',
-    'Romance': 'romance',
-    'Thriller': 'thriller'
-  }
+    Romance: 'romance',
+    Thriller: 'thriller',
+  };
 
-  const updateData: Record<string, { increment: number }> = {}
-  genres.forEach(g => {
-    const field = genreMap[g]
+  const updateData: Record<string, { increment: number }> = {};
+  genres.forEach((g) => {
+    const field = genreMap[g];
     if (field) {
-      updateData[field] = { increment: 5 } // Increment DNA score for that genre
+      updateData[field] = { increment: 5 };
     }
-  })
+  });
 
   if (Object.keys(updateData).length === 0) {
-    return { updated: false }
+    return { updated: false };
   }
 
   await db.cinephileDNA.update({
     where: { userId },
-    data: updateData
-  })
+    data: updateData,
+  });
 
-  // Reward XP for "watching/rating" which triggers DNA updates
-  await addXp(100, 'Engagement')
+  await addXp(100, 'Engagement');
 
-  return { updated: true }
+  return { updated: true };
 }
-
-

@@ -3,12 +3,14 @@
 import { auth } from '@/lib/auth'
 import db from '@/lib/db'
 import { revalidatePath } from 'next/cache'
+import { ensureDbUser } from '@/lib/ensure-user'
 
 export async function createSession() {
   const { userId } = await auth()
   if (!userId) throw new Error('Unauthorized')
 
-  // Generate a random 6-character room code
+  await ensureDbUser(userId)
+
   const code = Math.random().toString(36).substring(2, 8).toUpperCase()
 
   const session = await db.watchSession.create({
@@ -29,6 +31,8 @@ export async function joinSession(code: string) {
   const { userId } = await auth()
   if (!userId) throw new Error('Unauthorized')
 
+  await ensureDbUser(userId)
+
   const session = await db.watchSession.findUnique({
     where: { code: code.toUpperCase() },
     include: { members: true }
@@ -36,7 +40,6 @@ export async function joinSession(code: string) {
 
   if (!session) throw new Error('Session not found')
 
-  // Check if already a member
   const isMember = session.members.some(m => m.userId === userId)
   if (!isMember) {
     await db.watchSessionMember.create({

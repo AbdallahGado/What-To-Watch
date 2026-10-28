@@ -24,6 +24,10 @@ export interface TMDBPerson {
   biography?: string;
 }
 
+export interface TMDBPersonCredit extends TMDBMedia {
+  character?: string;
+}
+
 export interface TMDBVideo {
   key: string;
   type: string;
@@ -58,6 +62,24 @@ export interface TMDBMediaDetails extends TMDBMedia {
   tagline?: string;
   status?: string;
   runtime?: number;
+  episode_run_time?: number[];
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  last_air_date?: string;
+  genres?: Array<{ id: number; name: string }>;
+  networks?: TMDBProductionCompany[];
+  last_episode_to_air?: {
+    name?: string;
+    air_date?: string;
+    episode_number?: number;
+    season_number?: number;
+  } | null;
+  next_episode_to_air?: {
+    name?: string;
+    air_date?: string;
+    episode_number?: number;
+    season_number?: number;
+  } | null;
   budget?: number;
   revenue?: number;
   videos?: { results: TMDBVideo[] };
@@ -68,5 +90,5 @@ export interface TMDBMediaDetails extends TMDBMedia {
 }
 
 export interface TMDBPersonDetails extends TMDBPerson {
-  combined_credits?: { cast: TMDBMedia[] };
+  combined_credits?: { cast: TMDBPersonCredit[] };
 }

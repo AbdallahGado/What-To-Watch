@@ -1,4 +1,5 @@
 import { verifyWebhook, type WebhookEvent } from '@clerk/nextjs/webhooks';
+import type { NextRequest } from 'next/server';
 import db from '@/lib/db';
 
 const RETRY_DELAYS_MS = [200, 600];
@@ -65,7 +66,7 @@ async function withRetry<T>(
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   let event: WebhookEvent;
   try {
     event = await verifyWebhook(req);

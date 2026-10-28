@@ -1,8 +1,0 @@
-{
-  "/page": "app/page.js",
-  "/api/tmdb/videos/route": "app/api/tmdb/videos/route.js",
-  "/movies/page": "app/movies/page.js",
-  "/api/media/route": "app/api/media/route.js",
-  "/what-to-watch/page": "app/what-to-watch/page.js",
-  "/api/recommendations/route": "app/api/recommendations/route.js"
-}

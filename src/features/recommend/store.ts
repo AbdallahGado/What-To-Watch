@@ -21,7 +21,8 @@ const initialForm: RecommendationFormState = {
   genres: [],
   time: '',
   group: '',
-  language: ''
+  language: '',
+  adventure: ''
 };
 
 export const useRecommendStore = create<RecommendState>((set) => ({

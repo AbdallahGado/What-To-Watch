@@ -40,6 +40,7 @@ export default function SeriesPage() {
     items: series,
     isLoading,
     error,
+    retry,
     setActiveGenre,
     setActiveSort,
     setCurrentPage
@@ -49,10 +50,15 @@ export default function SeriesPage() {
     <div className="min-h-screen bg-background text-white pb-20">
       <Navbar activeView="series" />
       
-      <div className="pt-32 px-6 max-w-7xl mx-auto">
-        <div className="mb-10">
-             <h1 className="text-5xl font-display font-light mb-4">Series</h1>
-             <p className="text-white/50 max-w-2xl text-lg font-light">
+      <main id="main-content" tabIndex={-1} className="pt-32 px-6 max-w-7xl mx-auto relative overflow-x-clip">
+        {/* Background Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-accent-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+
+        <div className="mb-16">
+             <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight drop-shadow-lg">
+                Series
+             </h1>
+             <p className="text-white/70 max-w-2xl text-lg md:text-xl font-medium leading-relaxed drop-shadow-sm">
                 Binge-worthy TV shows from around the globe. 
                 Find your next obsession, from Korean dramas to American sitcoms.
              </p>
@@ -68,13 +74,15 @@ export default function SeriesPage() {
         />
 
         {error && (
-          <div className="text-center py-8">
+          <div className="text-center py-8" role="alert" aria-live="polite">
             <p className="text-red-400 text-lg">{error}</p>
             <button
-              onClick={() => window.location.reload()}
+              type="button"
+              onClick={retry}
+              disabled={isLoading}
               className="mt-4 px-6 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
             >
-              Try Again
+              {isLoading ? 'Retrying...' : 'Try Again'}
             </button>
           </div>
         )}
@@ -82,7 +90,7 @@ export default function SeriesPage() {
         <MediaGrid items={series} isLoading={isLoading} />
         
         <Pagination currentPage={currentPage} onPageChange={setCurrentPage} />
-      </div>
+      </main>
     </div>
   );
 }

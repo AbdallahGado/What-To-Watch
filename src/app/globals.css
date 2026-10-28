@@ -3,104 +3,178 @@
 @tailwind utilities;
 
 :root {
-  --color-brand-50: #f5f3ff;
-  --color-brand-100: #ede9fe;
-  --color-brand-200: #ddd6fe;
-  --color-brand-300: #c4b5fd;
-  --color-brand-400: #a78bfa;
-  --color-brand-500: #8b5cf6;
-  --color-brand-600: #7c3aed;
-  --color-brand-700: #6d28d9;
-  --color-brand-800: #5b21b6;
-  --color-brand-900: #4c1d95;
-  --color-brand-950: #2e1065;
+  /* Dynamic Deep Purple / Teal Accents */
+  --color-brand-50: #faf5ff;
+  --color-brand-100: #f3e8ff;
+  --color-brand-200: #e9d5ff;
+  --color-brand-300: #d8b4fe;
+  --color-brand-400: #c084fc;
+  --color-brand-500: #a855f7;
+  --color-brand-600: #9333ea;
+  --color-brand-700: #7e22ce;
+  --color-brand-800: #6b21a8;
+  --color-brand-900: #581c87;
+  --color-brand-950: #3b0764;
   
   --color-accent-50: #f0fdfa;
   --color-accent-500: #14b8a6;
   --color-accent-600: #0d9488;
 
-  --color-background: #0f1115; /* Softer charcoal/slate */
-  --color-surface: #1e2128;
-  --color-surface-hover: #272a33;
+  /* Deep Cinematic Backgrounds */
+  --color-background: #09090b; /* Very dark zinc */
+  --color-surface: #0f0f12;    /* Slightly lighter for cards */
+  --color-surface-hover: #18181b; 
   
-  --font-display: 'Playfair Display', serif; /* Elegant serif for headings */
+  --font-display: 'Playfair Display', serif;
+  color-scheme: dark;
 }
 
 html {
-  scroll-behavior: smooth;
+  scroll-padding-top: 80px; 
 }
 
 @layer base {
   body {
     background-color: var(--color-background);
     background-image: 
-        radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.08), transparent 25%),
-        radial-gradient(circle at 85% 30%, rgba(20, 184, 166, 0.08), transparent 25%);
-    color: #e2e8f0;
+        radial-gradient(ellipse at top center, rgba(168, 85, 247, 0.05), transparent 60%),
+        radial-gradient(ellipse at bottom left, rgba(20, 184, 166, 0.05), transparent 40%);
+    color: #f8fafc;
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    letter-spacing: -0.02em;
-    font-weight: 300; /* Lighter weights for relaxation */
+    letter-spacing: -0.03em;
+    font-weight: 400; 
+  }
+
+  ::selection {
+    background-color: rgba(168, 85, 247, 0.4); 
+    color: #ffffff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-300);
+    outline-offset: 3px;
   }
 }
 
 @layer components {
+  .skip-link {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 100;
+    transform: translateY(calc(-100% - 1.5rem));
+    border-radius: 9999px;
+    background: white;
+    padding: 0.75rem 1rem;
+    color: var(--color-background);
+    font-size: 0.875rem;
+    font-weight: 700;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    transition: transform 160ms ease-out;
+  }
+
+  .skip-link:focus {
+    transform: translateY(0);
+  }
+
+  /* Sleek Glassmorphism Container */
   .glass-panel {
-    background: rgba(30, 33, 40, 0.6);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.03);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    background: rgba(15, 15, 18, 0.6);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
   }
   
+  /* Highly Interactive Glass Button */
   .glass-button {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   
   .glass-button:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.3);
   }
 
+  .glass-button:active {
+    transform: translateY(0);
+  }
+
+  /* Core Gradients */
   .text-gradient {
-    background: linear-gradient(to right, #a78bfa, #2dd4bf);
+    background: linear-gradient(135deg, #d8b4fe 0%, #2dd4bf 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
   
-  /* Soft scrollbar */
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
+  .bg-gradient-premium {
+    background: linear-gradient(135deg, #6b21a8 0%, #0d9488 100%);
   }
+  
+  /* Hide scrollbar by default for clean look, show thin auto on hover */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
+  
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 9999px;
   }
+  
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.3);
   }
 
+  /* Utility to completely wipe scrollbars without losing functionality */
   .hide-scrollbar {
-    -ms-overflow-style: none;
     scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+  
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
   
+  /* Neon glow utility */
   .soft-glow {
-    box-shadow: 0 0 40px -10px rgba(139, 92, 246, 0.15);
+    box-shadow: 0 0 40px -10px rgba(168, 85, 247, 0.15);
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

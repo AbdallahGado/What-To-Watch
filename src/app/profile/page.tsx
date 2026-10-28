@@ -9,6 +9,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getPosterUrl } from '@/lib/tmdb-images'
 import { SignOutButton } from '@/lib/auth-client'
+import { SquadSwipePanel } from '@/app/components/SquadSwipePanel'
 
 export default async function ProfilePage() {
   const { userId } = await auth()
@@ -26,7 +27,7 @@ export default async function ProfilePage() {
 
   // Use upsert to handle both first-time creation and subsequent visits.
   // This is more efficient and avoids manual sync checks for core profile fields.
-  let dbUser = await db.user.upsert({
+  const dbUser = await db.user.upsert({
     where: { id: userId },
     update: {
       email: emailAddress,
@@ -106,7 +107,7 @@ export default async function ProfilePage() {
       </div>
       <Navbar activeView="profile" />
       
-      <main className="relative z-10 max-w-6xl mx-auto px-6 pt-32">
+      <main id="main-content" tabIndex={-1} className="relative z-10 max-w-6xl mx-auto px-6 pt-32">
         {/* Profile Header */}
         <div className="relative mb-14 rounded-[32px] border border-white/5 bg-white/[0.03] p-6 md:p-8 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-transparent" aria-hidden="true" />
@@ -243,7 +244,7 @@ export default async function ProfilePage() {
                   const href = item.mediaType === 'tv' ? `/tv/${item.tmdbId}` : `/movie/${item.tmdbId}`
                   const posterUrl = getPosterUrl(item.poster, 'w342')
                   return (
-                    <Link key={item.id} href={href as any} className="group space-y-3">
+                    <Link key={item.id} href={href} className="group space-y-3">
                       <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-white/5 border border-white/10">
                         {posterUrl ? (
                           <Image
@@ -276,51 +277,55 @@ export default async function ProfilePage() {
             )}
           </section>
 
-          <aside className="glass-panel p-8 rounded-3xl border border-white/5 space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <h3 className="text-xl font-display font-medium">Account</h3>
-                <p className="text-sm text-white/50">Update your Clerk profile details.</p>
-              </div>
-              <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-300">
-                <Settings className="w-5 h-5" aria-hidden="true" />
-              </div>
-            </div>
+          <aside className="space-y-8">
+            <SquadSwipePanel />
 
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between text-white/60">
-                <span>Email</span>
-                <span className="text-white/80">{dbUser.email}</span>
+            <div className="glass-panel p-8 rounded-3xl border border-white/5 space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <h3 className="text-xl font-display font-medium">Account</h3>
+                  <p className="text-sm text-white/50">Update your Clerk profile details.</p>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-300">
+                  <Settings className="w-5 h-5" aria-hidden="true" />
+                </div>
               </div>
-              <div className="flex items-center justify-between text-white/60">
-                <span>Member since</span>
-                <span className="text-white/80">{memberSince}</span>
-              </div>
-              <div className="flex items-center justify-between text-white/60">
-                <span>Last synced</span>
-                <span className="text-white/80">{lastSynced}</span>
-              </div>
-            </div>
 
-            <Link
-              href={"/user-profile" as any}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white text-background text-sm font-semibold py-3 hover:bg-brand-50 transition-colors"
-            >
-              Open Clerk Profile
-              <ArrowRight className="w-4 h-4" aria-hidden="true" />
-            </Link>
-            
-            {clerkEnabled && (
-              <SignOutButton>
-                <button
-                  type="button"
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 text-white/80 text-sm font-semibold py-3 hover:bg-white/10 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" aria-hidden="true" />
-                  Sign out
-                </button>
-              </SignOutButton>
-            )}
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between text-white/60">
+                  <span>Email</span>
+                  <span className="text-white/80">{dbUser.email}</span>
+                </div>
+                <div className="flex items-center justify-between text-white/60">
+                  <span>Member since</span>
+                  <span className="text-white/80">{memberSince}</span>
+                </div>
+                <div className="flex items-center justify-between text-white/60">
+                  <span>Last synced</span>
+                  <span className="text-white/80">{lastSynced}</span>
+                </div>
+              </div>
+
+              <Link
+                href="/user-profile"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white text-background text-sm font-semibold py-3 hover:bg-brand-50 transition-colors"
+              >
+                Open Clerk Profile
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
+              </Link>
+
+              {clerkEnabled && (
+                <SignOutButton>
+                  <button
+                    type="button"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 text-white/80 text-sm font-semibold py-3 hover:bg-white/10 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" aria-hidden="true" />
+                    Sign out
+                  </button>
+                </SignOutButton>
+              )}
+            </div>
           </aside>
         </div>
       </main>
