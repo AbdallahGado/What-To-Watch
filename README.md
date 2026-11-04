@@ -7,7 +7,7 @@ Smart movie and TV discovery — trending picks, mood-based recommendations, col
 - Next.js 14 (App Router) + TypeScript + Tailwind
 - TMDB API for media data
 - Clerk for auth (optional in local/dev)
-- Prisma + SQLite (swap `DATABASE_URL` for Postgres in production)
+- Prisma + PostgreSQL (use a hosted Postgres URL; see Production notes)
 
 ## Setup
 

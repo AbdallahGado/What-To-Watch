@@ -19,8 +19,7 @@ interface TvDetailsProps {
 }
 
 function formatDate(date?: string) {
-  if
-   (!date) return undefined;
+  if (!date) return undefined;
   const parsedDate = new Date(`${date}T00:00:00`);
   if (Number.isNaN(parsedDate.getTime())) return undefined;
   return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).format(parsedDate);

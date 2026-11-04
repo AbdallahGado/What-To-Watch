@@ -111,8 +111,6 @@ export function WhatToWatchClient() {
     else if (step === 'language') setStep('adventure');
     else if (step === 'adventure') {
       setStep('results');
-      setLoading(true);
-      setError(undefined);
       mutation.mutate();
     }
   };
@@ -657,20 +655,7 @@ function ResultsSection({ loading, error, onRetry, onEditAnswers, onStartOver }:
     );
   }
 
-  if (!results.length) {
-    return (
-      <div className="py-12 text-center space-y-6">
-        <p className="text-lg text-white/70">No matches found. Try adjusting your answers.</p>
-        <button
-          type="button"
-          onClick={onRetry}
-          className="px-8 py-3 rounded-full bg-white text-background font-medium hover:bg-white/90 transition-all font-bold"
-        >
-          Try again
-        </button>
-      </div>
-    );
-  }
+  if (!results.length) return null;
 
   const [primary, ...rest] = results;
   const isSaved = (item: RecommendationItem) =>
@@ -806,15 +791,15 @@ function ResultsSection({ loading, error, onRetry, onEditAnswers, onStartOver }:
             <span className="text-xs text-white/35">{rest.length} more</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {rest.map((item) => (
               <article
                 key={`${item.mediaType}:${item.id}`}
-                className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.025] p-3 transition-colors hover:border-white/20"
+                className="flex h-full min-w-0 flex-col rounded-2xl border border-white/10 bg-white/[0.025] p-3 transition-colors hover:border-white/20"
               >
                 <Link
                   href={`/${item.mediaType}/${item.id}`}
-                  className="group mx-auto block w-fit rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+                  className="group mx-auto block w-full max-w-[220px] rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
                 >
                   <MovieCard
                     tmdb={{
@@ -827,7 +812,7 @@ function ResultsSection({ loading, error, onRetry, onEditAnswers, onStartOver }:
                     variant="portrait"
                   />
                 </Link>
-                <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-white/50">
+                <p className="mt-3 min-h-[2.75rem] line-clamp-2 text-xs leading-relaxed text-white/50">
                   {item.explanation.reason}
                 </p>
                 <button
@@ -839,7 +824,7 @@ function ResultsSection({ loading, error, onRetry, onEditAnswers, onStartOver }:
                       ? `Remove ${item.title} from watchlist`
                       : `Save ${item.title} to watchlist`
                   }
-                  className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/65 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+                  className="mt-auto inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/65 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
                 >
                   {isSaved(item) ? (
                     <BookmarkCheck className="h-4 w-4 text-brand-300" aria-hidden="true" />

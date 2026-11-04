@@ -30,7 +30,7 @@ export function MediaCardLink({ item, priority = false, className = '' }: MediaC
   };
 
   return (
-    <div className={`group/media-card relative w-[180px] shrink-0 md:w-[220px] ${className}`}>
+    <div className={`group/media-card relative w-full min-w-0 ${className}`}>
       <MovieCard
         tmdb={toCardData(item)}
         variant="portrait"
