@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth';
 import db from '@/lib/db';
 import { revalidatePath } from 'next/cache';
+import { parseReviewInput } from '@/lib/review-validation';
 
 export async function addReview(
   tmdbId: number,
@@ -12,21 +13,14 @@ export async function addReview(
 ) {
   const { userId } = await auth();
   if (!userId) throw new Error('User not authenticated');
-
-  if (!tmdbId || !mediaType || !rating) {
-    throw new Error('Missing required fields');
-  }
-
-  if (rating < 1 || rating > 5) {
-    throw new Error('Rating must be between 1 and 5');
-  }
+  const input = parseReviewInput({ tmdbId, mediaType, rating, review });
 
   try {
     const existingReview = await db.userReview.findUnique({
       where: {
         userId_tmdbId: {
           userId,
-          tmdbId,
+          tmdbId: input.tmdbId,
         },
       },
     });
@@ -35,23 +29,23 @@ export async function addReview(
       await db.userReview.update({
         where: { id: existingReview.id },
         data: {
-          rating,
-          reviewText: review ?? null,
+          rating: input.rating,
+          reviewText: input.reviewText,
         },
       });
     } else {
       await db.userReview.create({
         data: {
           userId,
-          tmdbId,
-          mediaType,
-          rating,
-          reviewText: review ?? null,
+          tmdbId: input.tmdbId,
+          mediaType: input.mediaType,
+          rating: input.rating,
+          reviewText: input.reviewText,
         },
       });
     }
 
-    revalidatePath(`/${mediaType}/${tmdbId}`);
+    revalidatePath(`/${input.mediaType}/${input.tmdbId}`);
 
     return { success: true };
   } catch (error) {
@@ -129,4 +123,3 @@ export async function deleteReview(reviewId: string) {
     throw new Error('Failed to delete review');
   }
 }
-

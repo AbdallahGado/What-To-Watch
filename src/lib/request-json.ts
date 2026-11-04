@@ -1,0 +1,47 @@
+export class RequestJsonError extends Error {
+  constructor(
+    message: string,
+    readonly status: 400 | 413
+  ) {
+    super(message);
+    this.name = 'RequestJsonError';
+  }
+}
+
+export async function readJsonBody(request: Request, maxBytes: number): Promise<unknown> {
+  const declaredLength = Number(request.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    throw new RequestJsonError('Request body is too large.', 413);
+  }
+
+  if (!request.body) throw new RequestJsonError('Invalid JSON body.', 400);
+
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let bytesRead = 0;
+  let text = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      bytesRead += value.byteLength;
+      if (bytesRead > maxBytes) {
+        await reader.cancel();
+        throw new RequestJsonError('Request body is too large.', 413);
+      }
+
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
+  } finally {
+    reader.releaseLock();
+  }
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new RequestJsonError('Invalid JSON body.', 400);
+  }
+}

@@ -54,7 +54,7 @@ export default function CollectionPage() {
   const hasItems = totalCount > 0;
   const emptyMessage = query.trim()
     ? `No matches for "${query.trim()}".`
-    : 'Your collection is waiting for its first pick.';
+    : 'Your watchlist is waiting for its first pick.';
 
   return (
     <div className="relative min-h-screen bg-background text-white pb-20 overflow-hidden">
@@ -68,12 +68,12 @@ export default function CollectionPage() {
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-10">
           <div className="space-y-4">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white/50">
-              Collection
+              Watchlist
             </span>
             <div className="space-y-3">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-light">My Collection</h1>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-light">My Watchlist</h1>
               <p className="text-white/60 text-base sm:text-lg font-light max-w-2xl">
-                Your personal library of movies and series you want to watch.
+                Movies and series you’ve saved for later.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -95,9 +95,9 @@ export default function CollectionPage() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search your collection..."
+                placeholder="Search your watchlist..."
                 className="w-full rounded-2xl bg-white/5 border border-white/10 py-3 pl-11 pr-4 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/20"
-                aria-label="Search collection"
+                aria-label="Search watchlist"
               />
             </div>
             <div className="flex flex-wrap gap-2">
@@ -151,7 +151,7 @@ export default function CollectionPage() {
                   className="flex flex-col items-center justify-center py-20 border border-dashed border-white/10 rounded-3xl bg-white/5"
               >
                   <Film className="w-10 h-10 text-white/40 mb-4" aria-hidden="true" />
-                  <h3 className="text-xl font-medium text-white mb-2">Build your library</h3>
+                  <h3 className="text-xl font-medium text-white mb-2">Build your watchlist</h3>
                   <p className="text-white/50 mb-8 max-w-sm text-center">
                     Tap the &ldquo;Add to List&rdquo; button on any movie or show to save it here.
                   </p>

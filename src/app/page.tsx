@@ -11,8 +11,13 @@ import { PopularPeopleSection } from '@/features/home/sections/popular-people-se
 import { SectionSkeleton } from '@/features/home/components/section-skeleton';
 import { WhatToWatchEntry } from '@/features/recommend/what-to-watch-entry';
 import { WatchlistShelf } from '@/features/watchlist/watchlist-shelf';
+import type { Metadata } from 'next';
 
 export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 export default function HomePage() {
   return (

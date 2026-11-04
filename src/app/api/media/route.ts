@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getDiscoverMovies, getDiscoverTv } from '@/lib/tmdb';
 import { MediaQueryError, parseMediaQuery } from '@/lib/media-query';
 
+export const dynamic = 'force-dynamic';
+
 const JSON_CACHE_HEADERS = {
   'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600'
 };

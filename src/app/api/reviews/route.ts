@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import db from '@/lib/db';
+import { parseReviewInput, ReviewInputError } from '@/lib/review-validation';
+import { readJsonBody, RequestJsonError } from '@/lib/request-json';
 
 export async function POST(request: Request) {
   try {
@@ -9,21 +11,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { tmdbId, mediaType, rating, reviewText } = body as {
-      tmdbId: number;
-      mediaType: 'movie' | 'tv';
-      rating: number;
-      reviewText?: string;
-    };
-
-    if (!tmdbId || !mediaType || !rating) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await readJsonBody(request, 8192);
+    } catch (error) {
+      if (error instanceof RequestJsonError) {
+        return NextResponse.json({ error: error.message }, { status: error.status });
+      }
+      throw error;
     }
 
-    if (rating < 1 || rating > 5) {
-      return NextResponse.json({ error: 'Rating must be between 1 and 5' }, { status: 400 });
+    let input;
+    try {
+      input = parseReviewInput(body);
+    } catch (error) {
+      if (error instanceof ReviewInputError) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      throw error;
     }
+    const { tmdbId, mediaType, rating, reviewText } = input;
 
     const existingReview = await db.userReview.findUnique({
       where: {
@@ -38,6 +45,7 @@ export async function POST(request: Request) {
       await db.userReview.update({
         where: { id: existingReview.id },
         data: {
+          mediaType,
           rating,
           reviewText: reviewText ?? null
         }
@@ -54,7 +62,10 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json(
+      { success: true },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
   } catch (error) {
     console.error('Failed to save review', error);
     return NextResponse.json({ error: 'Failed to save review' }, { status: 500 });

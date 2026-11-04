@@ -77,7 +77,7 @@ const MovieCardComponent = ({
       aria-label={isInteractive ? `${title} - Rating: ${ratingLabel}` : undefined}
     >
       <div
-        className={`relative overflow-hidden rounded-3xl bg-slate-900 border border-white/5 shadow-2xl shadow-black/80 transition-all duration-300 ease-out group-hover:border-white/15 group-hover:shadow-brand-900/40 group-hover:shadow-3xl ${aspectClass} transform-gpu group-hover:-translate-y-2 will-change-transform`}
+        className={`relative overflow-hidden rounded-3xl bg-slate-900 border border-white/5 shadow-2xl shadow-black/80 transition-all duration-300 ease-out group-hover:border-white/15 group-hover:shadow-brand-900/40 group-hover:shadow-3xl ${aspectClass} transform-gpu group-hover:-translate-y-2`}
       >
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 opacity-80 z-10" />
         {imageUrl ? (

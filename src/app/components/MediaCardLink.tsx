@@ -9,9 +9,15 @@ interface MediaCardLinkProps {
   item: TMDBMedia;
   priority?: boolean;
   className?: string;
+  layout?: 'carousel' | 'grid';
 }
 
-export function MediaCardLink({ item, priority = false, className = '' }: MediaCardLinkProps) {
+export function MediaCardLink({
+  item,
+  priority = false,
+  className = '',
+  layout = 'carousel',
+}: MediaCardLinkProps) {
   const mediaType = item.media_type ?? 'movie';
   const title = getMediaTitle(item);
   const isSaved = useWatchlistStore((state) =>
@@ -30,7 +36,11 @@ export function MediaCardLink({ item, priority = false, className = '' }: MediaC
   };
 
   return (
-    <div className={`group/media-card relative w-full min-w-0 ${className}`}>
+    <div
+      className={`group/media-card relative ${
+        layout === 'grid' ? 'w-full min-w-0' : 'w-[180px] shrink-0 md:w-[220px]'
+      } ${className}`}
+    >
       <MovieCard
         tmdb={toCardData(item)}
         variant="portrait"

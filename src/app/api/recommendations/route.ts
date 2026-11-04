@@ -6,10 +6,11 @@ import {
   RecommendationRequestError,
   parseRecommendationRequest,
 } from '@/lib/recommendation-request';
+import { readJsonBody, RequestJsonError } from '@/lib/request-json';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json().catch(() => null);
+    const body = await readJsonBody(request, 8192);
     const parsed = parseRecommendationRequest(body);
 
     // Call existing TMDB logic
@@ -42,6 +43,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(results);
   } catch (error) {
+    if (error instanceof RequestJsonError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     if (error instanceof RecommendationRequestError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
@@ -49,4 +53,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to generate recommendations' }, { status: 500 });
   }
 }
-

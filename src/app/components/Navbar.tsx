@@ -15,7 +15,7 @@ const NAV_LINKS = [
   { id: 'home', label: 'Discover', href: '/', desc: 'Trending picks and highlights' },
   { id: 'movies', label: 'Movies', href: '/movies', desc: 'New releases and classics' },
   { id: 'series', label: 'Series', href: '/series', desc: 'Bingeable shows and hits' },
-  { id: 'list', label: 'Collection', href: '/collection', desc: 'Your saved watchlist' },
+  { id: 'list', label: 'Watchlist', href: '/collection', desc: 'Your saved movies and series' },
   { id: 'mood', label: 'Mood Match', href: '/what-to-watch', desc: 'Find something fast' },
 ] as const;
 

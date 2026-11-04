@@ -1,7 +1,7 @@
 'use client';
 
 import { SignUp } from '@clerk/nextjs';
-import { Navbar } from '@/app/components/Navbar';
+import { AuthPageLayout } from '@/app/components/AuthPageLayout';
 import { clerkAppearance, clerkEnabled } from '@/lib/clerk-appearance';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
@@ -9,10 +9,8 @@ import { ArrowRight } from 'lucide-react';
 export default function SignUpPage() {
   if (!clerkEnabled) {
     return (
-      <div className="min-h-screen bg-background text-white pb-20">
-        <Navbar />
-        <main id="main-content" tabIndex={-1} className="pt-32 max-w-3xl mx-auto px-6">
-          <div className="glass-panel p-8 rounded-3xl border border-white/10 space-y-4">
+      <AuthPageLayout>
+        <div className="glass-panel space-y-4 rounded-3xl border border-white/10 p-8">
             <h1 className="text-2xl font-display font-semibold">Connect Clerk</h1>
             <p className="text-white/60 text-sm leading-relaxed">
               Add <code>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code> and <code>CLERK_SECRET_KEY</code>
@@ -25,26 +23,20 @@ export default function SignUpPage() {
               Back home
               <ArrowRight className="w-4 h-4" aria-hidden="true" />
             </Link>
-          </div>
-        </main>
-      </div>
+        </div>
+      </AuthPageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-white pb-20">
-      <Navbar />
-      <main id="main-content" tabIndex={-1} className="pt-32 max-w-5xl mx-auto px-6">
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:p-6">
-          <SignUp
-            path="/sign-up"
-            routing="path"
-            appearance={clerkAppearance}
-            forceRedirectUrl="/profile"
-            signInUrl="/sign-in"
-          />
-        </div>
-      </main>
-    </div>
+    <AuthPageLayout>
+      <SignUp
+        path="/sign-up"
+        routing="path"
+        appearance={clerkAppearance}
+        forceRedirectUrl="/profile"
+        signInUrl="/sign-in"
+      />
+    </AuthPageLayout>
   );
 }

@@ -1,15 +1,20 @@
+import type { Metadata } from 'next'
 import { auth, currentUser } from '@/lib/auth'
 import { clerkEnabled } from '@/lib/clerk-appearance'
 import { redirect } from 'next/navigation'
 import db from '@/lib/db'
 import { CinephileRadar } from '@/app/components/CinephileRadar'
 import { Navbar } from '@/app/components/Navbar'
-import { Star, Trophy, Clock, MessageSquare, Settings, ArrowRight, LogOut } from 'lucide-react'
+import { Star, Trophy, Clock, MessageSquare, ArrowRight, LogOut } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getPosterUrl } from '@/lib/tmdb-images'
 import { SignOutButton } from '@/lib/auth-client'
 import { SquadSwipePanel } from '@/app/components/SquadSwipePanel'
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+}
 
 export default async function ProfilePage() {
   const { userId } = await auth()
@@ -281,13 +286,10 @@ export default async function ProfilePage() {
             <SquadSwipePanel />
 
             <div className="glass-panel p-8 rounded-3xl border border-white/5 space-y-6">
-              <div className="flex items-center justify-between">
+              <div>
                 <div className="space-y-2">
                   <h3 className="text-xl font-display font-medium">Account</h3>
                   <p className="text-sm text-white/50">Update your Clerk profile details.</p>
-                </div>
-                <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-300">
-                  <Settings className="w-5 h-5" aria-hidden="true" />
                 </div>
               </div>
 

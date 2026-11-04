@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import db from '@/lib/db';
 import { Navbar } from '@/app/components/Navbar';
 import { SwipeSessionClient } from './SwipeSessionClient';
@@ -9,24 +9,36 @@ import { ensureDbUser } from '@/lib/ensure-user';
 import type { TMDBMediaType } from '@/lib/tmdb-types';
 import Link from 'next/link';
 
+export const metadata = {
+  title: 'Squad Swipe',
+  robots: { index: false, follow: false },
+};
+
 export default async function SwipePage({ params }: { params: { code: string } }) {
   const { userId } = await auth();
   if (!userId) redirect('/sign-in');
 
+  const code = params.code.trim().toUpperCase();
+  if (!/^[A-Z0-9]{4,8}$/.test(code)) notFound();
+
   await ensureDbUser(userId);
 
   const session = await db.watchSession.findUnique({
-    where: { code: params.code.toUpperCase() },
-    include: {
+    where: { code },
+    select: {
+      id: true,
+      code: true,
+      status: true,
       members: {
-        include: {
-          user: true,
+        select: {
+          userId: true,
+          user: { select: { name: true, imageUrl: true } },
         },
       },
     },
   });
 
-  if (!session) {
+  if (!session || session.status !== 'active') {
     return (
       <div className="min-h-screen bg-background text-white flex flex-col">
         <Navbar />
@@ -55,14 +67,21 @@ export default async function SwipePage({ params }: { params: { code: string } }
     });
   }
 
-  const refreshed = isMember
-    ? session
-    : await db.watchSession.findUnique({
-        where: { id: session.id },
-        include: { members: { include: { user: true } } },
-      });
-
-  const members = refreshed?.members ?? session.members;
+  const members = isMember
+    ? session.members
+    : (
+        await db.watchSession.findUnique({
+          where: { id: session.id },
+          select: {
+            members: {
+              select: {
+                userId: true,
+                user: { select: { name: true, imageUrl: true } },
+              },
+            },
+          },
+        })
+      )?.members ?? session.members;
 
   const trending = await getTrending();
   const initialMovies = trending
@@ -79,7 +98,7 @@ export default async function SwipePage({ params }: { params: { code: string } }
     <div className="min-h-screen bg-background text-white pb-20">
       <Navbar />
       <SwipeSessionClient
-        code={params.code.toUpperCase()}
+        code={code}
         members={members}
         initialMovies={initialMovies}
       />

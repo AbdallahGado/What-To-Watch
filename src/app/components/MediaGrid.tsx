@@ -24,18 +24,16 @@ const SkeletonLoader = ({ count = 10 }: { count?: number }) => (
   </>
 );
 
-function MediaCardItem({ item, index }: { item: TMDBMedia; index: number }) {
+function MediaCardItem({ item }: { item: TMDBMedia }) {
   return (
     <motion.div
-      layout
       key={item.id}
-      custom={index}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.4, delay: index * 0.05, ease: 'easeOut' }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
     >
-      <MediaCardLink item={item} />
+      <MediaCardLink item={item} layout="grid" />
     </motion.div>
   );
 }
@@ -53,7 +51,7 @@ export function MediaGrid({ items, isLoading }: MediaGridProps) {
         {isLoading ? (
           <SkeletonLoader count={10} />
         ) : items.length > 0 ? (
-          items.map((item, i) => <MediaCardItem key={item.id} item={item} index={i} />)
+          items.map((item) => <MediaCardItem key={item.id} item={item} />)
         ) : (
           <div className="col-span-full text-center py-12 text-white/40">No items found</div>
         )}
