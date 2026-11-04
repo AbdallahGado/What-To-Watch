@@ -59,4 +59,5 @@ Without `TMDB_API_KEY`, the app falls back to mock data.
 - Use a hosted Postgres URL for `DATABASE_URL` (do not ship SQLite).
 - Remove or never deploy debug tooling; env secrets must stay in the host env, not the repo.
 - Configure Clerk webhooks to `/api/webhooks/clerk` for user sync.
-- Set `NEXT_PUBLIC_SITE_URL` to your live domain.
+- Set `NEXT_PUBLIC_SITE_URL` to your live domain in the hosting environment.
+- Submit `https://<your-live-domain>/sitemap.xml` in Google Search Console after deployment.

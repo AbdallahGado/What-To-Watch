@@ -5,6 +5,8 @@ import { getMovieDetails } from '@/lib/tmdb';
 import { MovieDetails } from '@/features/title/movie-details';
 import { getReviews, getUserReview } from '@/app/actions/review';
 import { parseTmdbId } from '@/lib/tmdb-id';
+import { getSiteUrl } from '@/lib/site-url';
+import { serializeJsonLd } from '@/lib/json-ld';
 
 interface Params {
   id: string;
@@ -56,11 +58,41 @@ export default async function MoviePage({ params }: PageProps) {
   ]);
 
   return (
-    <MovieDetails
-      data={data}
-      reviews={reviews}
-      userReview={userReview}
-      isSignedIn={Boolean(userId)}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd({
+            '@context': 'https://schema.org',
+            '@type': 'Movie',
+            name: data.title,
+            description: data.overview,
+            url: new URL(`/movie/${data.id}`, getSiteUrl()).toString(),
+            image: data.poster_path
+              ? `https://image.tmdb.org/t/p/w500${data.poster_path}`
+              : undefined,
+            datePublished: data.release_date || undefined,
+            genre: data.genres?.map((genre) => genre.name),
+            ...(data.vote_count && data.vote_count > 0
+              ? {
+                  aggregateRating: {
+                    '@type': 'AggregateRating',
+                    ratingValue: data.vote_average,
+                    ratingCount: data.vote_count,
+                    bestRating: 10,
+                    worstRating: 0,
+                  },
+                }
+              : {}),
+          }),
+        }}
+      />
+      <MovieDetails
+        data={data}
+        reviews={reviews}
+        userReview={userReview}
+        isSignedIn={Boolean(userId)}
+      />
+    </>
   );
 }

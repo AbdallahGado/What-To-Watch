@@ -1,7 +1,9 @@
 export function getSiteUrl(): URL {
   const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   const deploymentHost =
-    process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+    process.env.VERCEL_ENV === 'production'
+      ? 'what-towatch.vercel.app'
+      : process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
   const fallbackUrl = deploymentHost
     ? `https://${deploymentHost}`
     : 'http://localhost:3000';

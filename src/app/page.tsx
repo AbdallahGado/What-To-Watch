@@ -16,7 +16,16 @@ import type { Metadata } from 'next';
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
+  title: 'What to Watch Tonight? Find Movies & TV Shows',
+  description:
+    'Not sure what to watch tonight? Discover popular movies and TV shows, browse by genre, or get a recommendation matched to your mood.',
   alternates: { canonical: '/' },
+  openGraph: {
+    title: 'What to Watch Tonight? Find Movies & TV Shows',
+    description:
+      'Discover popular movies and TV shows, browse by genre, or get a recommendation matched to your mood.',
+    type: 'website',
+  },
 };
 
 export default function HomePage() {
